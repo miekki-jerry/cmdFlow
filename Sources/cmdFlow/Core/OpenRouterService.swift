@@ -1,6 +1,6 @@
 import Foundation
 
-/// Klient OpenRouter: chat completions (przez CloudChat) + listowanie modeli.
+/// OpenRouter client: chat completions (via CloudChat) + model listing.
 enum OpenRouterService {
 
     static func transform(apiKey: String, model: String, instructions: String, input: String) async throws -> String {
@@ -18,7 +18,7 @@ enum OpenRouterService {
         )
     }
 
-    // MARK: - Modele (do wyszukiwarki)
+    // MARK: - Models (for the search picker)
 
     struct Model: Decodable, Identifiable, Equatable {
         let id: String
@@ -43,7 +43,7 @@ enum OpenRouterService {
         let url = URL(string: "https://openrouter.ai/api/v1/models")!
         let (data, response) = try await URLSession.shared.data(from: url)
         if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
-            throw CloudChat.ServiceError(message: "OpenRouter: błąd HTTP \(http.statusCode).")
+            throw CloudChat.ServiceError(message: "OpenRouter: HTTP error \(http.statusCode).")
         }
         return try JSONDecoder().decode(ModelsResponse.self, from: data).data
     }

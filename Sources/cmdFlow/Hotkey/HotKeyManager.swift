@@ -1,9 +1,9 @@
 import AppKit
 import Carbon.HIToolbox
 
-/// Rejestruje globalne skróty przez Carbon RegisterEventHotKey.
-/// Nie wymaga uprawnień Accessibility — to standardowy mechanizm globalnych skrótów na macOS.
-/// Zdarzenia hot-key trafiają do handlera na głównym wątku.
+/// Registers global shortcuts via Carbon RegisterEventHotKey.
+/// No Accessibility permission required — the standard macOS global-shortcut mechanism.
+/// Hot-key events reach the handler on the main thread.
 @MainActor
 final class HotKeyManager {
     private var refs: [UInt32: EventHotKeyRef] = [:]
@@ -52,7 +52,7 @@ final class HotKeyManager {
         )
     }
 
-    /// Rejestruje skrót. Zwraca id rejestracji lub nil, gdy się nie powiodło.
+    /// Registers a shortcut. Returns the registration id, or nil on failure.
     @discardableResult
     func register(keyCode: UInt32, modifiers: UInt32, action: @escaping () -> Void) -> UInt32? {
         let id = nextID

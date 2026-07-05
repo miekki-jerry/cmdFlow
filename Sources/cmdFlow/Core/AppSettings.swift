@@ -1,10 +1,10 @@
 import Foundation
 
-/// Który tryb przetwarza tekst.
+/// Which mode processes the text.
 enum ProviderMode: String, Codable, CaseIterable, Identifiable {
     case appleOnly            // tylko model on-device Apple
-    case appleWithFallback    // Apple, a przy odmowie fallback do chmury
-    case cloud                // wyłącznie provider chmurowy
+    case appleWithFallback    // Apple, with a cloud fallback if it refuses
+    case cloud                // cloud provider only
 
     var id: String { rawValue }
 
@@ -12,7 +12,7 @@ enum ProviderMode: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .appleOnly: return "Apple (on-device)"
         case .appleWithFallback: return "Apple + fallback"
-        case .cloud: return "Chmura"
+        case .cloud: return "Cloud"
         }
     }
 
@@ -20,7 +20,7 @@ enum ProviderMode: String, Codable, CaseIterable, Identifiable {
     var usesCloud: Bool { self != .appleOnly }
 }
 
-/// Provider chmurowy (kompatybilny z OpenAI API).
+/// Cloud provider (OpenAI-API compatible).
 enum CloudProvider: String, Codable, CaseIterable, Identifiable {
     case openRouter
     case openAI
@@ -49,7 +49,7 @@ enum CloudProvider: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-/// Ustawienia aplikacji (bez sekretów — klucze API trzymamy w Keychain).
+/// App settings (no secrets — API keys live in the Keychain).
 struct AppSettings: Codable, Equatable {
     var providerMode: ProviderMode = .appleOnly
     var cloudProvider: CloudProvider = .openRouter
@@ -64,7 +64,7 @@ struct AppSettings: Codable, Equatable {
 }
 
 extension AppSettings {
-    /// Dekoder odporny na braki pól i migrujący starą wartość `openRouterOnly`.
+    /// Decoder tolerant of missing fields and migrating the legacy `openRouterOnly` value.
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         let rawMode = (try? c.decodeIfPresent(String.self, forKey: .providerMode)) ?? nil
@@ -78,7 +78,7 @@ extension AppSettings {
             providerMode = .appleOnly
         }
 
-        // Migracja: stary tryb „tylko OpenRouter" ustawia providera chmurowego.
+        // Migration: the legacy "OpenRouter only" mode sets the cloud provider.
         if rawMode == "openRouterOnly" {
             cloudProvider = .openRouter
         } else if rawMode == "openAIOnly" {

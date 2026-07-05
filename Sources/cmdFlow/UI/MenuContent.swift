@@ -20,12 +20,12 @@ struct MenuContent: View {
             }
 
             Divider()
-            Button("Ustawienia…") {
+            Button("Settings…") {
                 NotificationCenter.default.post(name: .openCmdFlowSettings, object: nil)
             }
             .keyboardShortcut(",", modifiers: .command)
 
-            Button("Zakończ cmdFlow") {
+            Button("Quit cmdFlow") {
                 NSApplication.shared.terminate(nil)
             }
             .keyboardShortcut("q", modifiers: .command)
@@ -38,14 +38,14 @@ struct MenuContent: View {
             case .idle:
                 switch app.modelStatus {
                 case .available:
-                    Text("Gotowe — naciśnij skrót")
+                    Text("Ready — press a shortcut")
                 case .unavailable(let reason):
                     Text("⚠︎ \(reason)")
                 }
             case .running(let name):
                 Text("⏳ \(name)…")
             case .success(let name):
-                Text("✓ \(name) — wynik w schowku")
+                Text("✓ \(name) — result in clipboard")
             case .failure(let message):
                 Text("✗ \(message)")
             }
@@ -57,6 +57,6 @@ struct MenuContent: View {
         if let shortcut = KeyCodes.describe(keyCode: action.keyCode, modifiers: action.modifiers) {
             return "\(action.name)   \(shortcut)"
         }
-        return "\(action.name)   (brak skrótu)"
+        return "\(action.name)   (no shortcut)"
     }
 }

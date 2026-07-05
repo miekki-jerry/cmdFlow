@@ -21,7 +21,7 @@ struct SettingsView: View {
         .onAppear { app.loadKeys() }
     }
 
-    // MARK: - Tło
+    // MARK: - Background
 
     private var backgroundGradient: some View {
         LinearGradient(
@@ -48,7 +48,7 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text("cmdFlow")
                     .font(.system(.title3, design: .rounded, weight: .bold))
-                Text("Skrót → schowek → model → schowek")
+                Text("Shortcut → clipboard → model → clipboard")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -64,12 +64,12 @@ struct SettingsView: View {
 
     private var statusPill: some View {
         let available: Bool = { if case .available = app.modelStatus { return true } else { return false } }()
-        let reason: String = { if case .unavailable(let r) = app.modelStatus { return r } else { return "Model Apple gotowy" } }()
+        let reason: String = { if case .unavailable(let r) = app.modelStatus { return r } else { return "Apple model ready" } }()
         return HStack(spacing: 5) {
             Circle()
                 .fill(available ? Color.green : Color.orange)
                 .frame(width: 7, height: 7)
-            Text(available ? "Model Apple gotowy" : reason)
+            Text(available ? "Apple model ready" : reason)
                 .font(.caption2.weight(.medium))
                 .lineLimit(1)
         }
@@ -80,12 +80,12 @@ struct SettingsView: View {
         .frame(maxWidth: 230, alignment: .trailing)
     }
 
-    // MARK: - Sekcja akcji
+    // MARK: - Actions section
 
     private var actionsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                SectionLabel("Akcje")
+                SectionLabel("Actions")
                 Spacer()
                 Text("\(app.actions.count)")
                     .font(.caption2.weight(.semibold))
@@ -108,9 +108,9 @@ struct SettingsView: View {
             Image(systemName: "sparkles")
                 .font(.largeTitle)
                 .foregroundStyle(Palette.gradient)
-            Text("Brak akcji")
+            Text("No actions")
                 .font(.headline)
-            Text("Dodaj pierwszą akcję i przypisz jej globalny skrót.")
+            Text("Add your first action and assign it a global shortcut.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -122,26 +122,35 @@ struct SettingsView: View {
     // MARK: - Footer
 
     private var footer: some View {
-        HStack {
-            Button(action: app.addAction) {
-                Label("Dodaj akcję", systemImage: "plus")
-                    .font(.callout.weight(.medium))
+        VStack(spacing: 8) {
+            HStack {
+                Button(action: app.addAction) {
+                    Label("Add action", systemImage: "plus")
+                        .font(.callout.weight(.medium))
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Palette.accentB)
+                Spacer()
+                Button("Quit") {
+                    NSApplication.shared.terminate(nil)
+                }
+                .foregroundStyle(.secondary)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(Palette.accentB)
-            Spacer()
-            Button("Zakończ") {
-                NSApplication.shared.terminate(nil)
-            }
-            .foregroundStyle(.secondary)
+            Text("© LUC LABS · v\(appVersion)")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 12)
         .background(.bar)
     }
+
+    private var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev"
+    }
 }
 
-// MARK: - Ogólne (uruchamianie przy logowaniu)
+// MARK: - General (launch at login)
 
 private struct GeneralCard: View {
     @EnvironmentObject var app: AppState
@@ -153,9 +162,9 @@ private struct GeneralCard: View {
                 .foregroundStyle(Palette.accentB)
                 .frame(width: 24)
             VStack(alignment: .leading, spacing: 1) {
-                Text("Uruchamiaj przy logowaniu")
+                Text("Launch at login")
                     .font(.system(.body, weight: .medium))
-                Text("Startuj cmdFlow automatycznie po zalogowaniu do systemu.")
+                Text("Start cmdFlow automatically when you log in.")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -171,7 +180,7 @@ private struct GeneralCard: View {
     }
 }
 
-// MARK: - Konfiguracja providera
+// MARK: - Provider configuration
 
 private struct ProviderCard: View {
     @EnvironmentObject var app: AppState
@@ -182,7 +191,7 @@ private struct ProviderCard: View {
             HStack(spacing: 8) {
                 Image(systemName: "cpu")
                     .foregroundStyle(Palette.accentB)
-                Text("Backend AI")
+                Text("AI backend")
                     .font(.system(.body, weight: .semibold))
                 Spacer()
             }
@@ -215,7 +224,7 @@ private struct ProviderCard: View {
 
     private var cloudProviderPicker: some View {
         VStack(alignment: .leading, spacing: 5) {
-            SectionLabel("Provider chmurowy")
+            SectionLabel("Cloud provider")
             Picker("", selection: $app.settings.cloudProvider) {
                 ForEach(CloudProvider.allCases) { provider in
                     Text(provider.label).tag(provider)
@@ -229,10 +238,10 @@ private struct ProviderCard: View {
     @ViewBuilder private var keyField: some View {
         let provider = app.settings.cloudProvider
         VStack(alignment: .leading, spacing: 5) {
-            SectionLabel("Klucz API \(provider.label)")
+            SectionLabel("\(provider.label) API key")
             SecureField(provider.keyPlaceholder, text: keyBinding)
                 .textFieldStyle(.roundedBorder)
-            Text("Przechowywany w Keychain. Utworzysz go na \(provider.keysURL)")
+            Text("Stored in Keychain. Create one at \(provider.keysURL)")
                 .font(.caption2).foregroundStyle(.secondary)
         }
     }
@@ -246,18 +255,18 @@ private struct ProviderCard: View {
             SectionLabel("Model")
             if app.settings.cloudProvider == .openRouter {
                 HStack(spacing: 8) {
-                    TextField("np. openai/gpt-4o-mini", text: $app.settings.openRouterModel)
+                    TextField("e.g. openai/gpt-4o-mini", text: $app.settings.openRouterModel)
                         .textFieldStyle(.roundedBorder)
                         .font(.system(.body, design: .monospaced))
                     Button {
                         showModelPicker = true
                     } label: {
-                        Label("Szukaj", systemImage: "magnifyingglass")
+                        Label("Search", systemImage: "magnifyingglass")
                     }
                 }
             } else {
                 HStack(spacing: 8) {
-                    TextField("np. gpt-4o-mini", text: $app.settings.openAIModel)
+                    TextField("e.g. gpt-4o-mini", text: $app.settings.openAIModel)
                         .textFieldStyle(.roundedBorder)
                         .font(.system(.body, design: .monospaced))
                     Menu {
@@ -265,7 +274,7 @@ private struct ProviderCard: View {
                             Button(model) { app.settings.openAIModel = model }
                         }
                     } label: {
-                        Label("Modele", systemImage: "list.bullet")
+                        Label("Models", systemImage: "list.bullet")
                     }
                     .menuStyle(.borderlessButton)
                     .fixedSize()
@@ -277,16 +286,16 @@ private struct ProviderCard: View {
     private var modeHint: String {
         switch app.settings.providerMode {
         case .appleOnly:
-            return "Model on-device Apple. Prywatny i darmowy, ale nie wspiera każdego języka (m.in. polskiego wejściowego)."
+            return "Apple's on-device model. Private and free, but it doesn't support every language (e.g. Polish input)."
         case .appleWithFallback:
-            return "Najpierw Apple on-device; gdy odmówi (np. język), automatyczny fallback do wybranego providera chmurowego."
+            return "Apple on-device first; if it refuses (e.g. language), automatic fallback to the selected cloud provider."
         case .cloud:
-            return "Każde żądanie idzie do wybranego providera na Twoim kluczu. Dowolny język, koszt wg cennika modelu."
+            return "Every request goes to the selected provider on your key. Any language, cost per the model's pricing."
         }
     }
 }
 
-// MARK: - Karta akcji
+// MARK: - Action card
 
 private struct ActionCard: View {
     @Binding var action: PromptAction
@@ -300,7 +309,7 @@ private struct ActionCard: View {
                     .labelsHidden()
                     .toggleStyle(.switch)
                     .controlSize(.mini)
-                TextField("Nazwa akcji", text: $action.name)
+                TextField("Action name", text: $action.name)
                     .textFieldStyle(.plain)
                     .font(.system(.headline, design: .rounded))
                 Spacer()
@@ -310,11 +319,11 @@ private struct ActionCard: View {
                     Image(systemName: "trash")
                 }
                 .buttonStyle(.borderless)
-                .help("Usuń akcję")
+                .help("Delete action")
             }
 
             VStack(alignment: .leading, spacing: 5) {
-                SectionLabel("Skrót globalny")
+                SectionLabel("Global shortcut")
                 ShortcutRecorder(keyCode: $action.keyCode, modifiers: $action.modifiers)
             }
 
@@ -336,7 +345,7 @@ private struct ActionCard: View {
             }
 
             HStack(alignment: .center) {
-                Text("Tekst ze schowka → treść, prompt → instrukcja.")
+                Text("Clipboard text → content, prompt → instructions.")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -346,7 +355,7 @@ private struct ActionCard: View {
                     if testing {
                         ProgressView().controlSize(.small)
                     } else {
-                        Label("Uruchom teraz", systemImage: "play.fill")
+                        Label("Run now", systemImage: "play.fill")
                             .font(.caption.weight(.medium))
                     }
                 }
@@ -361,7 +370,7 @@ private struct ActionCard: View {
     }
 }
 
-// MARK: - Wyszukiwarka modeli OpenRouter
+// MARK: - OpenRouter model search
 
 private struct ModelPickerSheet: View {
     @Binding var selected: String
@@ -383,17 +392,17 @@ private struct ModelPickerSheet: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("Modele OpenRouter")
+                Text("OpenRouter models")
                     .font(.system(.headline, design: .rounded))
                 Spacer()
-                Button("Gotowe") { dismiss() }
+                Button("Done") { dismiss() }
                     .keyboardShortcut(.defaultAction)
             }
             .padding(14)
             Divider()
 
             if loading {
-                ProgressView("Pobieranie modeli…")
+                ProgressView("Loading models…")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let error {
                 VStack(spacing: 10) {
@@ -401,7 +410,7 @@ private struct ModelPickerSheet: View {
                         .font(.largeTitle).foregroundStyle(.orange)
                     Text(error).font(.caption).foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
-                    Button("Spróbuj ponownie") { Task { await load() } }
+                    Button("Try again") { Task { await load() } }
                         .buttonStyle(.borderedProminent).tint(Palette.accentB)
                 }
                 .padding()
@@ -435,7 +444,7 @@ private struct ModelPickerSheet: View {
                     }
                     .buttonStyle(.plain)
                 }
-                .searchable(text: $query, placement: .automatic, prompt: "Szukaj modelu (np. claude, gpt, gemini)")
+                .searchable(text: $query, placement: .automatic, prompt: "Search models (e.g. claude, gpt, gemini)")
             }
         }
         .frame(width: 540, height: 580)
@@ -450,7 +459,7 @@ private struct ModelPickerSheet: View {
             models = list.sorted { $0.displayName.lowercased() < $1.displayName.lowercased() }
             loading = false
         } catch {
-            self.error = "Nie udało się pobrać listy modeli. Sprawdź połączenie."
+            self.error = "Couldn't load the model list. Check your connection."
             loading = false
         }
     }

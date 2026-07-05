@@ -2,111 +2,111 @@
 
 # ⌘ cmdFlow
 
-**Zaznacz. Kopiuj. Naciśnij skrót. Wklej wynik.**
+**Select. Copy. Press a shortcut. Paste the result.**
 
-Menu-barowa aplikacja na macOS, która przepuszcza tekst ze schowka przez model AI pod globalnym skrótem klawiszowym — domyślnie **on-device** (Apple Foundation Model), opcjonalnie przez **OpenRouter** lub **OpenAI**.
+A macOS app that runs your clipboard text through an AI model under a global keyboard shortcut — on-device by default (Apple Foundation Model), optionally via **OpenRouter** or **OpenAI**.
 
 [![Release](https://img.shields.io/github/v/release/miekki-jerry/cmdFlow?color=8B4DF2)](https://github.com/miekki-jerry/cmdFlow/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![macOS 26+](https://img.shields.io/badge/macOS-26%2B-black?logo=apple)](https://www.apple.com/macos/)
 
-[**Landing page →**](https://cmdflow.vercel.app) &nbsp;·&nbsp; [Pobierz](https://github.com/miekki-jerry/cmdFlow/releases/latest) &nbsp;·&nbsp; [Autor: bogumilluc.pl](https://bogumilluc.pl)
+[**Landing page →**](https://cmdflow.vercel.app) &nbsp;·&nbsp; [Download](https://github.com/miekki-jerry/cmdFlow/releases/latest) &nbsp;·&nbsp; [Made by bogumilluc.pl](https://bogumilluc.pl)
 
-<img src="docs/screenshots/settings_pt1.png" width="380" alt="Ustawienia cmdFlow — uruchamianie przy logowaniu, Backend AI i klucz API"> <img src="docs/screenshots/settings_pt2.png" width="380" alt="Ustawienia cmdFlow — akcje ze skrótami globalnymi i promptami">
+<img src="docs/screenshots/settings_pt1.png" width="380" alt="cmdFlow settings — launch at login, AI backend and API key"> <img src="docs/screenshots/settings_pt2.png" width="380" alt="cmdFlow settings — actions with global shortcuts and prompts">
 
 </div>
 
 ---
 
-## Po co to jest
+## Why it exists
 
-Ciągle kopiuję jakiś fragment i chcę go szybko przerobić — przetłumaczyć, poprawić gramatykę, streścić — bez wklejania do ChatGPT, przełączania okien i kopiowania z powrotem. cmdFlow robi to jednym skrótem, na miejscu:
+I keep copying a snippet and wanting to transform it fast — translate it, fix its grammar, summarize it — without pasting into ChatGPT, switching windows, and copying the result back. cmdFlow does that with a single shortcut, in place:
 
 ```
-[globalny skrót]  →  tekst ze schowka  →  Twój prompt  →  model AI  →  wynik do schowka
+[global shortcut]  →  clipboard text  →  your prompt  →  AI model  →  result back to the clipboard
 ```
 
-Definiujesz **akcje** — każda to para *globalny skrót + prompt*. Jedna tłumaczy na angielski, druga poprawia gramatykę, trzecia streszcza. Kopiujesz tekst, naciskasz skrót, wklejasz wynik.
+You define **actions** — each one is a pair of *global shortcut + prompt*. One translates to English, another fixes grammar, another summarizes. Copy some text, press the shortcut, paste the result.
 
-## Dlaczego trzy providery (i skąd polski problem)
+## Three backends (and the Polish story)
 
-Aplikacja powstała wokół **Apple Foundation Models** — modelu, który działa **lokalnie na Macu**: prywatnie, za darmo, bez kluczy API. Model radzi sobie świetnie w wielu językach (EN/DE/FR/ES/IT/PT/JA/KO/ZH).
+The app is built around **Apple Foundation Models** — a model that runs **locally on your Mac**: private, free, no API key. It handles many languages well (EN/DE/FR/ES/IT/PT/JA/KO/ZH).
 
-Jest jednak jedno konkretne ograniczenie, które wyszło w testach: **polski tekst wejściowy jest odrzucany** przez guardrail modelu (`unsupportedLanguageOrLocale`), niedeterministycznie i bez obejścia po stronie promptu. To ograniczenie Apple, nie aplikacji — polski nie jest jeszcze oficjalnie wspieranym językiem wejściowym Apple Intelligence.
+There is one concrete limitation that testing surfaced: **Polish input text is rejected** by the model's guardrail (`unsupportedLanguageOrLocale`), non-deterministically and with no prompt-level workaround. That is Apple's constraint, not the app's — Polish is not an officially supported input language for Apple Intelligence yet.
 
-Dlatego cmdFlow ma **trzy tryby backendu**, które można przełączać w Ustawieniach:
+So cmdFlow ships **three backend modes**, switchable in Settings:
 
-| Tryb | Opis |
+| Mode | What it does |
 |---|---|
-| **Apple (on-device)** | Model Apple Intelligence lokalnie. Prywatny, darmowy, bez klucza. Ograniczone języki. |
-| **Apple + fallback** | Najpierw Apple; gdy odmówi (np. polski input), automatyczny fallback do chmury. **Rekomendowane dla polskiego.** |
-| **Chmura** | Każde żądanie do wybranego providera na Twoim kluczu API. Dowolny język i model. |
+| **Apple (on-device)** | Apple Intelligence, locally. Private, free, no key. Limited languages. |
+| **Apple + fallback** | Apple first; if it refuses (e.g. Polish input), automatic fallback to the cloud. **Recommended for Polish.** |
+| **Cloud** | Every request goes to the selected provider on your own API key. Any language, any model. |
 
-Provider chmurowy: **OpenRouter** (300+ modeli, wbudowana wyszukiwarka) lub **OpenAI** (`gpt-4o`, `gpt-4o-mini`, `gpt-4.1`, …). Klucz API trzymany jest w **Keychain**, nie w plaintext.
+Cloud provider: **OpenRouter** (300+ models, built-in search) or **OpenAI** (`gpt-4o`, `gpt-4o-mini`, `gpt-4.1`, …). Your API key is stored in the **Keychain**, never in plain text.
 
-## Jak działa
+## How it works
 
-1. **Skopiuj** dowolny tekst (`⌘C`).
-2. **Naciśnij** swój skrót — cmdFlow czyta schowek i uruchamia prompt.
-3. **Wklej** (`⌘V`) — wynik jest już w schowku.
+1. **Copy** any text (`⌘C`).
+2. **Press** your shortcut — cmdFlow reads the clipboard and runs the prompt.
+3. **Paste** (`⌘V`) — the result is already in your clipboard.
 
-## Funkcje
+## Features
 
-- 🎹 **Globalne skróty** — Carbon `RegisterEventHotKey`, bez uprawnień Accessibility.
-- ⚙️ **Wiele akcji** — każda z własnym skrótem i promptem, persystencja w UserDefaults.
-- 🔒 **On-device by default** — tekst nie opuszcza Maca, dopóki nie wybierzesz chmury.
-- ☁️ **OpenRouter + OpenAI** — własny klucz (w Keychain), wyszukiwarka modeli OpenRouter.
-- 🎬 **Nagrywanie skrótu z animacją** — fale radaru, keycapy, ostrzeżenie o kolizjach z systemem.
-- 🚀 **Uruchamianie przy logowaniu** — jeden przełącznik (`SMAppService`).
-- 📍 **Menu bar** — bez ikony w Docku; ikona `⌘` zmienia stan (praca / sukces / błąd).
+- 🎹 **Global shortcuts** — Carbon `RegisterEventHotKey`, no Accessibility permission.
+- ⚙️ **Multiple actions** — each with its own shortcut and prompt, persisted locally.
+- 🔒 **On-device by default** — your text never leaves the Mac until you pick a cloud provider.
+- ☁️ **OpenRouter + OpenAI** — your own key (in the Keychain), plus an OpenRouter model search.
+- 🎬 **Animated shortcut recorder** — radar pulse, keycaps, and a warning on system collisions.
+- 🚀 **Launch at login** — one toggle (`SMAppService`).
+- 📍 **Stays out of the way** — no Dock icon; a quiet `⌘` in the menu bar that reflects state (working / success / error).
 
-## Instalacja
+## Install
 
-Aplikacja jest **niepodpisana** (projekt open-source, bez Apple Developer Account), więc Gatekeeper wymaga jednorazowego potwierdzenia:
+The app is **unsigned** (open source, no Apple Developer account), so Gatekeeper needs a one-time confirmation:
 
-1. Pobierz `cmdFlow-x.y.z.dmg` z [Releases](https://github.com/miekki-jerry/cmdFlow/releases), otwórz i przeciągnij **cmdFlow** do **Aplikacji**.
-2. Pierwsze uruchomienie: **prawy klik na cmdFlow → Otwórz** → *Otwórz*.
-3. Jeśli macOS twierdzi, że aplikacja jest „uszkodzona":
+1. Download `cmdFlow-x.y.z.dmg` from [Releases](https://github.com/miekki-jerry/cmdFlow/releases), open it, and drag **cmdFlow** to **Applications**.
+2. First launch: **right-click cmdFlow → Open** → *Open*.
+3. If macOS claims the app is "damaged":
    ```bash
    xattr -dr com.apple.quarantine /Applications/cmdFlow.app
    ```
 
-## Wymagania
+## Requirements
 
 - **macOS 26 (Tahoe)+**, **Apple Silicon** (M1+)
-- Tryb Apple: włączone **Apple Intelligence** (Ustawienia systemowe → Apple Intelligence & Siri)
-- Tryb chmurowy: klucz API [OpenRouter](https://openrouter.ai/keys) lub [OpenAI](https://platform.openai.com/api-keys) — działa też, gdy urządzenie nie ma Apple Intelligence
+- Apple mode: enable **Apple Intelligence** (System Settings → Apple Intelligence & Siri)
+- Cloud mode: an API key from [OpenRouter](https://openrouter.ai/keys) or [OpenAI](https://platform.openai.com/api-keys) — works even if the device has no Apple Intelligence
 
-## Budowanie ze źródeł
+## Build from source
 
 ```bash
 git clone https://github.com/miekki-jerry/cmdFlow.git
 cd cmdFlow
-swift build -c release          # kompilacja
-./Scripts/build_app.sh 0.4.0    # złożenie cmdFlow.app w dist/
-./Scripts/make_release.sh 0.4.0 # + .dmg i .zip
+swift build -c release          # compile
+./Scripts/build_app.sh 0.5.0    # assemble cmdFlow.app in dist/
+./Scripts/make_release.sh 0.5.0 # + .dmg and .zip
 ```
 
-Wymaga Xcode 26+ / Swift 6.2+. Aplikacja to pakiet SPM składany do `.app` skryptem — bez pliku `.xcodeproj`.
+Requires Xcode 26+ / Swift 6.2+. The app is an SPM package assembled into a `.app` by a script — no `.xcodeproj`.
 
-## Architektura
+## Architecture
 
-| Komponent | Rola |
+| Component | Role |
 |---|---|
-| `HotKeyManager` | Globalne skróty przez Carbon `RegisterEventHotKey` |
-| `FoundationModelService` | Warstwa nad `FoundationModels` z retry i obsługą błędów |
-| `CloudChat` | Wspólny klient chat/completions (OpenAI-compatible) |
-| `OpenRouterService` / `OpenAIService` | Providerzy chmurowi + listowanie modeli OpenRouter |
-| `Keychain` | Bezpieczne przechowywanie kluczy API |
-| `LaunchAtLogin` | Uruchamianie przy logowaniu (`SMAppService`) |
-| `AppState` | Persystencja akcji/ustawień, routing providerów, rejestracja skrótów |
-| `ShortcutRecorder` / `DesignKit` | Animowany recorder i wspólny język wizualny |
+| `HotKeyManager` | Global shortcuts via Carbon `RegisterEventHotKey` |
+| `FoundationModelService` | Layer over `FoundationModels` with retry and error handling |
+| `CloudChat` | Shared chat/completions client (OpenAI-compatible) |
+| `OpenRouterService` / `OpenAIService` | Cloud providers + OpenRouter model listing |
+| `Keychain` | Secure storage for API keys |
+| `LaunchAtLogin` | Launch at login via `SMAppService` |
+| `AppState` | Persists actions/settings, routes providers, registers shortcuts |
+| `ShortcutRecorder` / `DesignKit` | Animated recorder and shared visual language |
 
-## Autor
+## Author
 
-Stworzone przez **Bogumił Łuć** — [bogumilluc.pl](https://bogumilluc.pl).
+Made by **Bogumił Łuć** — [bogumilluc.pl](https://bogumilluc.pl).
 Landing page: [cmdflow.vercel.app](https://cmdflow.vercel.app)
 
-## Licencja
+## License
 
-[MIT](LICENSE) © 2026 Bogumił Łuć
+[MIT](LICENSE) © 2026 LUC LABS

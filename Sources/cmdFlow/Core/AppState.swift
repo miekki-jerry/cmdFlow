@@ -1,10 +1,10 @@
 import AppKit
 import Combine
 
-/// Przejściowy stan pokazywany w ikonie menu bar.
+/// Transient state shown in the menu bar icon.
 enum Activity: Equatable {
     case idle
-    case running(String)   // nazwa akcji
+    case running(String)   // action name
     case success(String)
     case failure(String)
 }
@@ -19,8 +19,8 @@ final class AppState: ObservableObject {
     @Published var settings: AppSettings {
         didSet { persistSettings() }
     }
-    /// Klucze API — przechowywane w Keychain, tu tylko lustra dla UI.
-    /// Ładowane leniwie (przy otwarciu Ustawień), żeby prompt Keychain nie blokował startu.
+    /// API keys — stored in Keychain; these are just UI mirrors.
+    /// Loaded lazily (when Settings opens) so the Keychain prompt doesn't block launch.
     @Published var openRouterKey: String = "" {
         didSet { if !isLoadingKeys { Keychain.set(openRouterKey, account: Keychain.openRouterAccount) } }
     }
@@ -29,7 +29,7 @@ final class AppState: ObservableObject {
     }
     private var isLoadingKeys = false
     private var keysLoaded = false
-    @Published private(set) var modelStatus: ModelStatus = .unavailable("Sprawdzanie…")
+    @Published private(set) var modelStatus: ModelStatus = .unavailable("Checking…")
     @Published private(set) var activity: Activity = .idle
     @Published private(set) var launchAtLogin: Bool = false
 
@@ -49,15 +49,15 @@ final class AppState: ObservableObject {
         if #available(macOS 26.0, *) {
             modelStatus = FoundationModelService.status()
         } else {
-            modelStatus = .unavailable("Wymagany macOS 26 lub nowszy.")
+            modelStatus = .unavailable("Requires macOS 26 or later.")
         }
         launchAtLogin = LaunchAtLogin.isEnabled
         reregisterHotKeys()
     }
 
-    // MARK: - Klucze API (leniwe ładowanie)
+    // MARK: - API keys (lazy load)
 
-    /// Wczytuje klucze z Keychain do luster UI. Wołane przy otwarciu Ustawień.
+    /// Loads keys from Keychain into the UI mirrors. Called when Settings opens.
     func loadKeys() {
         guard !keysLoaded else { return }
         keysLoaded = true
@@ -67,14 +67,14 @@ final class AppState: ObservableObject {
         isLoadingKeys = false
     }
 
-    // MARK: - Uruchamianie przy logowaniu
+    // MARK: - Launch at login
 
     func setLaunchAtLogin(_ enabled: Bool) {
         try? LaunchAtLogin.set(enabled)
         launchAtLogin = LaunchAtLogin.isEnabled
     }
 
-    // MARK: - Akcje CRUD
+    // MARK: - Actions CRUD
 
     func addAction() {
         actions.append(.newTemplate())
@@ -92,7 +92,7 @@ final class AppState: ObservableObject {
         }
     }
 
-    // MARK: - Rejestracja skrótów
+    // MARK: - Shortcut registration
 
     private func reregisterHotKeys() {
         hotKeys.unregisterAll()
@@ -105,17 +105,17 @@ final class AppState: ObservableObject {
         }
     }
 
-    // MARK: - Uruchamianie
+    // MARK: - Running
 
     private func trigger(actionID: UUID) {
         guard let action = actions.first(where: { $0.id == actionID }) else { return }
         Task { await run(action) }
     }
 
-    /// Publiczne wywołanie (skrót, menu, przycisk „Uruchom teraz").
+    /// Public entry point (shortcut, menu, "Run now" button).
     func run(_ action: PromptAction) async {
         guard let input = Clipboard.readString(), !input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            setActivity(.failure("Schowek jest pusty"))
+            setActivity(.failure("Clipboard is empty"))
             NSSound.beep()
             return
         }
@@ -132,7 +132,7 @@ final class AppState: ObservableObject {
         }
     }
 
-    /// Kieruje żądanie do właściwego backendu wg wybranego trybu.
+    /// Routes the request to the right backend based on the selected mode.
     private func generate(instructions: String, input: String) async throws -> String {
         switch settings.providerMode {
         case .cloud:
@@ -143,7 +143,7 @@ final class AppState: ObservableObject {
             do {
                 return try await appleGenerate(instructions: instructions, input: input)
             } catch {
-                // Apple odmówił (np. język) lub jest niedostępny — próbujemy chmury.
+                // Apple refused (e.g. language) or is unavailable — try the cloud.
                 return try await cloudGenerate(instructions: instructions, input: input)
             }
         }
@@ -168,13 +168,13 @@ final class AppState: ObservableObject {
 
     private func appleGenerate(instructions: String, input: String) async throws -> String {
         guard #available(macOS 26.0, *) else {
-            throw RunError(message: "Model Apple wymaga macOS 26+.")
+            throw RunError(message: "The Apple model requires macOS 26+.")
         }
         let status = FoundationModelService.status()
         modelStatus = status
         guard status == .available else {
             if case .unavailable(let reason) = status { throw RunError(message: reason) }
-            throw RunError(message: "Model Apple jest niedostępny.")
+            throw RunError(message: "The Apple model is unavailable.")
         }
         return try await FoundationModelService.transform(instructions: instructions, input: input)
     }
@@ -194,7 +194,7 @@ final class AppState: ObservableObject {
         NSSound(named: name)?.play()
     }
 
-    // MARK: - Persystencja
+    // MARK: - Persistence
 
     private func persist() {
         guard let data = try? JSONEncoder().encode(actions) else { return }
@@ -226,7 +226,7 @@ final class AppState: ObservableObject {
 
     private static var defaultAction: PromptAction {
         PromptAction(
-            name: "Tłumacz na angielski",
+            name: "Translate to English",
             keyCode: nil,
             modifiers: 0,
             prompt: "You are a translation engine. Translate the user's text to English. Output only the translation, with no greetings, notes, or commentary.",

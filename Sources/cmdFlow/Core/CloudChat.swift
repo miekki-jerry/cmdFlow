@@ -1,7 +1,7 @@
 import Foundation
 
-/// Wspólny klient endpointu chat/completions w formacie OpenAI.
-/// Używany zarówno przez OpenRouter, jak i OpenAI.
+/// Shared client for the OpenAI-format chat/completions endpoint.
+/// Used by both OpenRouter and OpenAI.
 enum CloudChat {
     struct ServiceError: LocalizedError {
         let message: String
@@ -27,10 +27,10 @@ enum CloudChat {
     ) async throws -> String {
         let key = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !key.isEmpty else {
-            throw ServiceError(message: "Brak klucza API \(providerName). Wklej go w Ustawieniach.")
+            throw ServiceError(message: "No \(providerName) API key. Paste one in Settings.")
         }
         guard !model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            throw ServiceError(message: "Nie wybrano modelu \(providerName).")
+            throw ServiceError(message: "No \(providerName) model selected.")
         }
 
         var request = URLRequest(url: endpoint)
@@ -55,7 +55,7 @@ enum CloudChat {
 
         let decoded = try JSONDecoder().decode(ChatResponse.self, from: data)
         guard let content = decoded.choices.first?.message.content, !content.isEmpty else {
-            throw ServiceError(message: "\(providerName) zwrócił pustą odpowiedź.")
+            throw ServiceError(message: "\(providerName) returned an empty response.")
         }
         return content
     }
@@ -65,10 +65,10 @@ enum CloudChat {
         guard (200...299).contains(http.statusCode) else {
             let apiMessage = extractErrorMessage(data)
             switch http.statusCode {
-            case 401: throw ServiceError(message: "Nieprawidłowy klucz API \(providerName) (401).")
-            case 402: throw ServiceError(message: "Brak środków na koncie \(providerName) (402).")
-            case 429: throw ServiceError(message: "Limit zapytań \(providerName) przekroczony (429).")
-            default: throw ServiceError(message: apiMessage ?? "\(providerName): błąd HTTP \(http.statusCode).")
+            case 401: throw ServiceError(message: "Invalid \(providerName) API key (401).")
+            case 402: throw ServiceError(message: "No credit on your \(providerName) account (402).")
+            case 429: throw ServiceError(message: "\(providerName) rate limit exceeded (429).")
+            default: throw ServiceError(message: apiMessage ?? "\(providerName): HTTP error \(http.statusCode).")
             }
         }
     }

@@ -1,7 +1,7 @@
 import Foundation
 import Security
 
-/// Minimalny wrapper Keychain dla sekretów (klucze API).
+/// Minimal Keychain wrapper for secrets (API keys).
 enum Keychain {
     static let openRouterAccount = "openrouter-api-key"
     static let openAIAccount = "openai-api-key"

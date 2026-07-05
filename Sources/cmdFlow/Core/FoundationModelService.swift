@@ -1,7 +1,7 @@
 import Foundation
 import FoundationModels
 
-/// Cienka warstwa nad Apple Foundation Models (model on-device, Apple Intelligence).
+/// Thin layer over Apple Foundation Models (on-device model, Apple Intelligence).
 enum ModelStatus: Equatable {
     case available
     case unavailable(String)
@@ -17,29 +17,29 @@ enum FoundationModelService {
         case .unavailable(let reason):
             return .unavailable(describe(reason))
         @unknown default:
-            return .unavailable("Nieznany status modelu.")
+            return .unavailable("Unknown model status.")
         }
     }
 
-    /// Błąd tłumaczony na czytelny komunikat dla użytkownika.
+    /// Error translated into a readable user-facing message.
     struct FriendlyError: LocalizedError {
         let message: String
         var errorDescription: String? { message }
     }
 
-    /// Przepuszcza `input` (tekst ze schowka) przez `instructions` (prompt użytkownika).
-    /// Guardrail modelu potrafi niedeterministycznie odrzucić język (np. polski) —
-    /// w takim wypadku ponawiamy raz, a przy powtórnym błędzie zwracamy jasny komunikat.
+    /// Runs `input` (clipboard text) through `instructions` (the user prompt).
+    /// The model's guardrail can non-deterministically reject a language (e.g. Polish) —
+    /// in that case we retry once, and on a second failure return a clear message.
     static func transform(instructions: String, input: String) async throws -> String {
         do {
             return try await respond(instructions: instructions, input: input)
         } catch let error as LanguageModelSession.GenerationError {
             if case .unsupportedLanguageOrLocale = error {
-                // Ponów raz — ten sam tekst potrafi przejść za drugim razem.
+                // Retry once — the same text can pass on a second attempt.
                 do {
                     return try await respond(instructions: instructions, input: input)
                 } catch {
-                    throw FriendlyError(message: "Model odrzucił język tekstu. Apple Intelligence nie wspiera jeszcze oficjalnie m.in. polskiego — spróbuj krótszego fragmentu lub instrukcji po angielsku.")
+                    throw FriendlyError(message: "The model rejected the text's language. Apple Intelligence doesn't officially support Polish yet — try a shorter passage or an English instruction.")
                 }
             }
             throw FriendlyError(message: friendly(error))
@@ -55,24 +55,24 @@ enum FoundationModelService {
     private static func friendly(_ error: LanguageModelSession.GenerationError) -> String {
         switch error {
         case .exceededContextWindowSize:
-            return "Tekst jest za długi dla modelu. Skróć zawartość schowka."
+            return "The text is too long for the model. Shorten the clipboard content."
         case .guardrailViolation:
-            return "Model zablokował treść ze względów bezpieczeństwa."
+            return "The model blocked the content for safety reasons."
         default:
-            return "Model nie zdołał przetworzyć tekstu. Spróbuj ponownie."
+            return "The model couldn't process the text. Try again."
         }
     }
 
     private static func describe(_ reason: SystemLanguageModel.Availability.UnavailableReason) -> String {
         switch reason {
         case .deviceNotEligible:
-            return "To urządzenie nie obsługuje Apple Intelligence."
+            return "This device doesn't support Apple Intelligence."
         case .appleIntelligenceNotEnabled:
-            return "Włącz Apple Intelligence w Ustawieniach systemowych."
+            return "Enable Apple Intelligence in System Settings."
         case .modelNotReady:
-            return "Model się pobiera lub przygotowuje. Spróbuj za chwilę."
+            return "The model is downloading or preparing. Try again shortly."
         @unknown default:
-            return "Model jest chwilowo niedostępny."
+            return "The model is temporarily unavailable."
         }
     }
 }

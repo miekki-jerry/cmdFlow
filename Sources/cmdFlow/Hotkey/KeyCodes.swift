@@ -1,13 +1,13 @@
 import AppKit
 import Carbon.HIToolbox
 
-/// Konwersje i opisy klawiszy. NSEvent.keyCode jest tożsame z wirtualnym keyCode Carbon,
-/// więc tę samą wartość podajemy do RegisterEventHotKey.
+/// Key conversions and descriptions. NSEvent.keyCode equals the Carbon virtual keyCode,
+/// so the same value is passed to RegisterEventHotKey.
 enum KeyCodes {
 
-    // MARK: - Modyfikatory
+    // MARK: - Modifiers
 
-    /// NSEvent.ModifierFlags -> maska Carbon (cmdKey/optionKey/controlKey/shiftKey).
+    /// NSEvent.ModifierFlags -> Carbon mask (cmdKey/optionKey/controlKey/shiftKey).
     static func carbonModifiers(from flags: NSEvent.ModifierFlags) -> UInt32 {
         var result: UInt32 = 0
         if flags.contains(.command) { result |= UInt32(cmdKey) }
@@ -17,8 +17,8 @@ enum KeyCodes {
         return result
     }
 
-    /// Czy maska zawiera przynajmniej jeden „mocny" modyfikator (⌘/⌃/⌥)?
-    /// Sam Shift nie wystarcza dla globalnego skrótu.
+    /// Does the mask contain at least one "strong" modifier (⌘/⌃/⌥)?
+    /// Shift alone is not enough for a global shortcut.
     static func hasStrongModifier(_ modifiers: UInt32) -> Bool {
         modifiers & (UInt32(cmdKey) | UInt32(optionKey) | UInt32(controlKey)) != 0
     }
@@ -32,7 +32,7 @@ enum KeyCodes {
         return s
     }
 
-    // MARK: - Nazwa klawisza
+    // MARK: - Key name
 
     static func keyName(_ keyCode: UInt32) -> String {
         if let special = specialKeys[Int(keyCode)] { return special }
@@ -40,13 +40,13 @@ enum KeyCodes {
         return "?"
     }
 
-    /// Pełny opis skrótu, np. „⌘⇧T".
+    /// Full shortcut description, e.g. "⌘⇧T".
     static func describe(keyCode: UInt32?, modifiers: UInt32) -> String? {
         guard let keyCode else { return nil }
         return modifierSymbols(modifiers) + keyName(keyCode)
     }
 
-    /// Odczyt znaku dla keyCode wg bieżącego układu klawiatury.
+    /// Reads the character for a keyCode using the current keyboard layout.
     private static func character(for keyCode: UInt32) -> String? {
         guard let source = TISCopyCurrentASCIICapableKeyboardLayoutInputSource()?.takeRetainedValue(),
               let layoutData = TISGetInputSourceProperty(source, kTISPropertyUnicodeKeyLayoutData)

@@ -1,7 +1,7 @@
 import SwiftUI
 import Carbon.HIToolbox
 
-/// Pole nagrywania skrótu z dopracowaną animacją „nasłuchiwania".
+/// Shortcut recording field with a polished "listening" animation.
 struct ShortcutRecorder: View {
     @Binding var keyCode: UInt32?
     @Binding var modifiers: UInt32
@@ -43,7 +43,7 @@ struct ShortcutRecorder: View {
 
             if recording {
                 HStack(spacing: 5) {
-                    Text("Nasłuchuję")
+                    Text("Listening")
                         .font(.system(.callout, design: .rounded, weight: .medium))
                         .foregroundStyle(Palette.accentB)
                     AnimatedDots().foregroundStyle(Palette.accentB)
@@ -56,7 +56,7 @@ struct ShortcutRecorder: View {
                 }
                 .transition(.scale.combined(with: .opacity))
             } else {
-                Text("Ustaw skrót")
+                Text("Set shortcut")
                     .font(.system(.callout, design: .rounded))
                     .foregroundStyle(.secondary)
             }
@@ -103,7 +103,7 @@ struct ShortcutRecorder: View {
 
     @ViewBuilder private var statusLine: some View {
         if recording {
-            Text("Naciśnij kombinację  ·  ⎋ anuluje")
+            Text("Press a combination  ·  ⎋ to cancel")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         } else if let warning {
@@ -138,7 +138,7 @@ struct ShortcutRecorder: View {
         hint = nil
         monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { event in
             handle(event)
-            return nil // pochłoń zdarzenie
+            return nil // swallow the event
         }
     }
 
@@ -168,7 +168,7 @@ struct ShortcutRecorder: View {
 
         let mods = KeyCodes.carbonModifiers(from: event.modifierFlags)
         guard KeyCodes.hasStrongModifier(mods) else {
-            withAnimation { warning = "Dodaj ⌘, ⌃ lub ⌥ — sam znak to za mało." }
+            withAnimation { warning = "Add ⌘, ⌃ or ⌥ — a bare key isn't enough." }
             return
         }
 
@@ -177,18 +177,18 @@ struct ShortcutRecorder: View {
             keyCode = code
             modifiers = mods
             if let conflict = ReservedShortcuts.conflict(modifiers: mods, keyCode: code) {
-                warning = "Zwykle zajęty przez: \(conflict). Może nie zadziałać."
+                warning = "Usually taken by: \(conflict). May not work."
                 hint = nil
             } else {
                 warning = nil
-                hint = "Skrót ustawiony"
+                hint = "Shortcut set"
             }
         }
         stopRecording()
     }
 }
 
-/// Rozchodzące się fale „radaru" widoczne podczas nasłuchiwania.
+/// Expanding "radar" rings shown while listening.
 private struct RadarRings: View {
     @State private var animate = false
     var body: some View {

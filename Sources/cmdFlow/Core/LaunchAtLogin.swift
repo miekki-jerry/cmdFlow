@@ -1,6 +1,6 @@
 import ServiceManagement
 
-/// Uruchamianie aplikacji przy logowaniu przez SMAppService (macOS 13+).
+/// Launch the app at login via SMAppService (macOS 13+).
 enum LaunchAtLogin {
     static var isEnabled: Bool {
         SMAppService.mainApp.status == .enabled

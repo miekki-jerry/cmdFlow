@@ -19,7 +19,7 @@ struct CmdFlowApp: App {
     }
 }
 
-/// Ikona w pasku menu reagująca na stan pracy.
+/// Menu bar icon reacting to the current activity.
 private struct MenuBarLabel: View {
     @ObservedObject var app: AppState
 
@@ -42,7 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var settingsWindow = SettingsWindowController(appState: .shared)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Aplikacja żyje w pasku menu, bez ikony w Docku.
+        // The app lives in the menu bar, no Dock icon.
         NSApplication.shared.setActivationPolicy(.accessory)
 
         NotificationCenter.default.addObserver(
@@ -51,18 +51,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             MainActor.assumeIsolated { self?.settingsWindow.show() }
         }
 
-        // Otwórz Ustawienia przy starcie — inaczej użytkownik widzi tylko ikonę w pasku menu.
+        // Open Settings on launch — otherwise the user only sees the menu bar icon.
         settingsWindow.show()
     }
 
-    /// Ponowne kliknięcie aplikacji (Finder/Launchpad/Dock) otwiera Ustawienia.
+    /// Re-opening the app (Finder/Launchpad/Dock) opens Settings.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         settingsWindow.show()
         return true
     }
 }
 
-/// Okno Ustawień oparte o NSWindow — niezawodne dla aplikacji typu menu bar (accessory).
+/// NSWindow-based Settings window — reliable for an accessory (menu bar) app.
 @MainActor
 final class SettingsWindowController {
     private var window: NSWindow?
@@ -76,7 +76,7 @@ final class SettingsWindowController {
         if window == nil {
             let hosting = NSHostingController(rootView: SettingsView().environmentObject(appState))
             let win = NSWindow(contentViewController: hosting)
-            win.title = "Ustawienia cmdFlow"
+            win.title = "cmdFlow Settings"
             win.styleMask = [.titled, .closable, .miniaturizable]
             win.isReleasedWhenClosed = false
             win.center()

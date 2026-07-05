@@ -1,10 +1,10 @@
 import Carbon.HIToolbox
 
-/// Heurystyczna lista popularnych skrótów systemowych macOS.
+/// Heuristic list of common macOS system shortcuts.
 ///
-/// Uwaga: pełne, pewne wykrycie zajętych globalnie skrótów wymaga prywatnych API
-/// (CGSGetSymbolicHotKeyValue). Zamiast tego ostrzegamy o najczęstszych kolizjach,
-/// a właściwym testem jest to, czy `RegisterEventHotKey` faktycznie odbierze zdarzenie.
+/// Note: fully reliable detection of globally-taken shortcuts needs private APIs
+/// (CGSGetSymbolicHotKeyValue). Instead we warn about the most common collisions;
+/// the real test is whether `RegisterEventHotKey` actually receives the event.
 enum ReservedShortcuts {
 
     struct Entry {
@@ -15,18 +15,18 @@ enum ReservedShortcuts {
 
     static let all: [Entry] = [
         Entry(name: "Spotlight", modifiers: cmd, keyCode: UInt32(kVK_Space)),
-        Entry(name: "Podgląd znaków / emoji", modifiers: ctrl | cmd, keyCode: UInt32(kVK_Space)),
-        Entry(name: "Przełączanie aplikacji", modifiers: cmd, keyCode: UInt32(kVK_Tab)),
-        Entry(name: "Zamknij aplikację", modifiers: cmd, keyCode: UInt32(kVK_ANSI_Q)),
-        Entry(name: "Zamknij okno", modifiers: cmd, keyCode: UInt32(kVK_ANSI_W)),
-        Entry(name: "Ukryj aplikację", modifiers: cmd, keyCode: UInt32(kVK_ANSI_H)),
-        Entry(name: "Zrzut ekranu (obszar)", modifiers: shift | cmd, keyCode: UInt32(kVK_ANSI_4)),
-        Entry(name: "Zrzut ekranu (cały)", modifiers: shift | cmd, keyCode: UInt32(kVK_ANSI_3)),
-        Entry(name: "Narzędzie zrzutu ekranu", modifiers: shift | cmd, keyCode: UInt32(kVK_ANSI_5)),
-        Entry(name: "Wymuś zamknięcie", modifiers: opt | cmd, keyCode: UInt32(kVK_Escape)),
+        Entry(name: "Character / emoji viewer", modifiers: ctrl | cmd, keyCode: UInt32(kVK_Space)),
+        Entry(name: "Switch apps", modifiers: cmd, keyCode: UInt32(kVK_Tab)),
+        Entry(name: "Quit app", modifiers: cmd, keyCode: UInt32(kVK_ANSI_Q)),
+        Entry(name: "Close window", modifiers: cmd, keyCode: UInt32(kVK_ANSI_W)),
+        Entry(name: "Hide app", modifiers: cmd, keyCode: UInt32(kVK_ANSI_H)),
+        Entry(name: "Screenshot (area)", modifiers: shift | cmd, keyCode: UInt32(kVK_ANSI_4)),
+        Entry(name: "Screenshot (full)", modifiers: shift | cmd, keyCode: UInt32(kVK_ANSI_3)),
+        Entry(name: "Screenshot tool", modifiers: shift | cmd, keyCode: UInt32(kVK_ANSI_5)),
+        Entry(name: "Force Quit", modifiers: opt | cmd, keyCode: UInt32(kVK_Escape)),
     ]
 
-    /// Zwraca nazwę systemowej funkcji, jeśli kombinacja koliduje z popularnym skrótem.
+    /// Returns the system feature name if the combination collides with a common shortcut.
     static func conflict(modifiers: UInt32, keyCode: UInt32) -> String? {
         all.first { $0.modifiers == modifiers && $0.keyCode == keyCode }?.name
     }

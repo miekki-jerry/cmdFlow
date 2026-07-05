@@ -1,8 +1,8 @@
 import Foundation
 
-/// Klient OpenAI: chat completions przez CloudChat.
+/// OpenAI client: chat completions via CloudChat.
 enum OpenAIService {
-    /// Popularne modele czatu do szybkiego wyboru w Ustawieniach.
+    /// Common chat models for quick selection in Settings.
     static let suggestedModels = [
         "gpt-4o-mini",
         "gpt-4o",

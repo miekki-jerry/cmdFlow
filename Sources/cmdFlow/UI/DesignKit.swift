@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Wspólny język wizualny aplikacji.
+/// Shared visual language of the app.
 enum Palette {
     static let accentA = Color(red: 0.36, green: 0.42, blue: 0.98)
     static let accentB = Color(red: 0.55, green: 0.30, blue: 0.95)
@@ -15,7 +15,7 @@ enum Palette {
     }
 }
 
-/// Jednolita karta z materiałem, delikatną obwódką i cieniem.
+/// Consistent card with material, a subtle border and shadow.
 private struct CardModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
@@ -36,7 +36,7 @@ extension View {
     func card() -> some View { modifier(CardModifier()) }
 }
 
-/// Etykieta sekcji — małe wersaliki z tracking.
+/// Section label — small caps with tracking.
 struct SectionLabel: View {
     let text: String
     init(_ text: String) { self.text = text }
