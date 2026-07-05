@@ -2,7 +2,6 @@ import SwiftUI
 
 struct MenuContent: View {
     @EnvironmentObject var app: AppState
-    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         Group {
@@ -22,8 +21,7 @@ struct MenuContent: View {
 
             Divider()
             Button("Ustawienia…") {
-                NSApplication.shared.activate(ignoringOtherApps: true)
-                openWindow(id: "settings")
+                NotificationCenter.default.post(name: .openCmdFlowSettings, object: nil)
             }
             .keyboardShortcut(",", modifiers: .command)
 

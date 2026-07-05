@@ -6,7 +6,7 @@ Menu-barowa aplikacja na macOS, która przepuszcza tekst ze schowka przez **Appl
 [globalny skrót]  →  tekst ze schowka  →  Twój prompt  →  Apple Foundation Model  →  wynik do schowka
 ```
 
-Przykład: skopiuj fragment, naciśnij `⌃⌥⌘T`, wklej — masz tłumaczenie. Zero okien, zero chmury, zero kluczy API.
+Przykład: skopiuj fragment, naciśnij `⌃⌥⌘T`, wklej — masz tłumaczenie. Domyślnie w 100% on-device, a **opcjonalnie** możesz przełączyć backend na **OpenRouter** (własny klucz API), gdy potrzebujesz dowolnego języka lub innego modelu.
 
 ---
 
@@ -17,11 +17,23 @@ Przykład: skopiuj fragment, naciśnij `⌃⌥⌘T`, wklej — masz tłumaczenie
 - **W 100% on-device** — model Apple Intelligence działa lokalnie. Tekst nie opuszcza komputera.
 - **Menu bar** — brak ikony w Docku, dyskretna ikona `⌘` ze stanem (praca / sukces / błąd).
 
+## Backend AI
+
+W Ustawieniach wybierasz jeden z trzech trybów:
+
+| Tryb | Opis |
+|---|---|
+| **Apple (on-device)** | Model Apple Intelligence lokalnie. Prywatny, darmowy, bez klucza. Ograniczone języki (patrz niżej). |
+| **Apple + fallback** | Najpierw Apple; gdy odmówi (np. polski input), automatyczny fallback do OpenRouter. |
+| **OpenRouter** | Każde żądanie do [OpenRouter](https://openrouter.ai) na Twoim kluczu API. Dowolny język i model. |
+
+Dla trybów z OpenRouter: wklej klucz API (przechowywany w **Keychain**, nie w plaintext), wpisz nazwę modelu albo użyj **wyszukiwarki** (przycisk *Szukaj* — pobiera pełną listę modeli OpenRouter z filtrem i oznaczeniem darmowych).
+
 ## Wymagania
 
-- **macOS 26 (Tahoe) lub nowszy**
-- **Apple Silicon** (M1+)
-- **Włączone Apple Intelligence** — Ustawienia systemowe → Apple Intelligence & Siri
+- **macOS 26 (Tahoe) lub nowszy**, **Apple Silicon** (M1+)
+- Tryb Apple: **włączone Apple Intelligence** (Ustawienia systemowe → Apple Intelligence & Siri)
+- Tryb OpenRouter: **klucz API** z [openrouter.ai/keys](https://openrouter.ai/keys) (działa też, gdy urządzenie nie ma Apple Intelligence)
 
 ## Obsługiwane języki (ważne)
 
@@ -74,8 +86,10 @@ Wymaga Xcode 26+ / Swift 6.2+.
 |---|---|
 | `HotKeyManager` | Globalne skróty przez Carbon `RegisterEventHotKey` — bez uprawnień Accessibility |
 | `FoundationModelService` | Warstwa nad `FoundationModels` (`SystemLanguageModel`, `LanguageModelSession`) z retry i obsługą błędów |
+| `OpenRouterService` | Chat completions + listowanie modeli OpenRouter |
+| `Keychain` | Bezpieczne przechowywanie klucza API |
 | `Clipboard` | Odczyt/zapis `NSPasteboard` |
-| `AppState` | Persystencja akcji (UserDefaults), rejestracja skrótów, uruchamianie, stan ikony |
+| `AppState` | Persystencja akcji/ustawień, routing providerów, rejestracja skrótów, stan ikony |
 | `ShortcutRecorder` | Nagrywanie skrótu z animacją i detekcją kolizji |
 
 Aplikacja to pakiet SPM (`executableTarget`) składany do `.app` skryptem — bez pliku `.xcodeproj`.
