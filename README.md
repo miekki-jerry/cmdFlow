@@ -12,7 +12,7 @@ Menu-barowa aplikacja na macOS, która przepuszcza tekst ze schowka przez model 
 
 [**Landing page →**](https://cmdflow.vercel.app) &nbsp;·&nbsp; [Pobierz](https://github.com/miekki-jerry/cmdFlow/releases/latest) &nbsp;·&nbsp; [Autor: bogumilluc.pl](https://bogumilluc.pl)
 
-<img src="docs/screenshots/settings.png" width="620" alt="Ustawienia cmdFlow — Backend AI, providerzy chmurowi i akcje ze skrótami">
+<img src="docs/screenshots/settings_pt1.png" width="380" alt="Ustawienia cmdFlow — uruchamianie przy logowaniu, Backend AI i klucz API"> <img src="docs/screenshots/settings_pt2.png" width="380" alt="Ustawienia cmdFlow — akcje ze skrótami globalnymi i promptami">
 
 </div>
 
