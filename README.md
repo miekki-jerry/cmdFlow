@@ -15,6 +15,8 @@ Przykład: skopiuj fragment, naciśnij `⌃⌥⌘T`, wklej — masz tłumaczenie
 - **Wiele akcji** — każda to para *globalny skrót + prompt*. Jedna tłumaczy na angielski, druga poprawia gramatykę, trzecia streszcza — jak zdefiniujesz.
 - **Nagrywanie skrótu z animacją** — wciśnij kombinację; aplikacja ostrzega, gdy koliduje z popularnym skrótem systemowym i wymaga modyfikatora (⌘/⌃/⌥).
 - **W 100% on-device** — model Apple Intelligence działa lokalnie. Tekst nie opuszcza komputera.
+- **Opcjonalny OpenRouter** — własny klucz API dla dowolnego języka/modelu (patrz niżej).
+- **Uruchamianie przy logowaniu** — jeden przełącznik (`SMAppService`).
 - **Menu bar** — brak ikony w Docku, dyskretna ikona `⌘` ze stanem (praca / sukces / błąd).
 
 ## Backend AI
@@ -89,8 +91,10 @@ Wymaga Xcode 26+ / Swift 6.2+.
 | `OpenRouterService` | Chat completions + listowanie modeli OpenRouter |
 | `Keychain` | Bezpieczne przechowywanie klucza API |
 | `Clipboard` | Odczyt/zapis `NSPasteboard` |
+| `LaunchAtLogin` | Uruchamianie przy logowaniu przez `SMAppService` |
 | `AppState` | Persystencja akcji/ustawień, routing providerów, rejestracja skrótów, stan ikony |
-| `ShortcutRecorder` | Nagrywanie skrótu z animacją i detekcją kolizji |
+| `ShortcutRecorder` | Nagrywanie skrótu z animacją (fale radaru, keycapy) i detekcją kolizji |
+| `DesignKit` | Wspólny język wizualny: gradient, karty, keycapy |
 
 Aplikacja to pakiet SPM (`executableTarget`) składany do `.app` skryptem — bez pliku `.xcodeproj`.
 

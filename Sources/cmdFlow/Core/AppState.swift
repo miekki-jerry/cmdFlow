@@ -25,6 +25,7 @@ final class AppState: ObservableObject {
     }
     @Published private(set) var modelStatus: ModelStatus = .unavailable("Sprawdzanie…")
     @Published private(set) var activity: Activity = .idle
+    @Published private(set) var launchAtLogin: Bool = false
 
     private let hotKeys = HotKeyManager()
     private let defaultsKey = "cmdflow.actions.v1"
@@ -45,7 +46,15 @@ final class AppState: ObservableObject {
         } else {
             modelStatus = .unavailable("Wymagany macOS 26 lub nowszy.")
         }
+        launchAtLogin = LaunchAtLogin.isEnabled
         reregisterHotKeys()
+    }
+
+    // MARK: - Uruchamianie przy logowaniu
+
+    func setLaunchAtLogin(_ enabled: Bool) {
+        try? LaunchAtLogin.set(enabled)
+        launchAtLogin = LaunchAtLogin.isEnabled
     }
 
     // MARK: - Akcje CRUD
