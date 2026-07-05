@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          swift --version
+          xcodebuild -version
+
+      - name: Build (release)
+        run: swift build -c release
+
+      - name: Assemble .app bundle
+        run: ./Scripts/build_app.sh 0.0.0-ci
+
+      - name: Verify bundle
+        run: |
+          test -f dist/cmdFlow.app/Contents/MacOS/cmdFlow
+          test -f dist/cmdFlow.app/Contents/Info.plist
+          echo "Bundle OK"
