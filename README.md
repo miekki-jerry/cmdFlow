@@ -1,102 +1,111 @@
-# cmdFlow
+<div align="center">
 
-Menu-barowa aplikacja na macOS, która przepuszcza tekst ze schowka przez **Apple Foundation Model** (model on-device, Apple Intelligence) i wynik odkłada z powrotem do schowka — wszystko pod globalnym skrótem klawiszowym.
+# ⌘ cmdFlow
 
-```
-[globalny skrót]  →  tekst ze schowka  →  Twój prompt  →  Apple Foundation Model  →  wynik do schowka
-```
+**Zaznacz. Kopiuj. Naciśnij skrót. Wklej wynik.**
 
-Przykład: skopiuj fragment, naciśnij `⌃⌥⌘T`, wklej — masz tłumaczenie. Domyślnie w 100% on-device, a **opcjonalnie** możesz przełączyć backend na **OpenRouter** (własny klucz API), gdy potrzebujesz dowolnego języka lub innego modelu.
+Menu-barowa aplikacja na macOS, która przepuszcza tekst ze schowka przez model AI pod globalnym skrótem klawiszowym — domyślnie **on-device** (Apple Foundation Model), opcjonalnie przez **OpenRouter** lub **OpenAI**.
+
+[![Release](https://img.shields.io/github/v/release/miekki-jerry/cmdFlow?color=8B4DF2)](https://github.com/miekki-jerry/cmdFlow/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![macOS 26+](https://img.shields.io/badge/macOS-26%2B-black?logo=apple)](https://www.apple.com/macos/)
+
+[**Landing page →**](https://cmdflow.vercel.app) &nbsp;·&nbsp; [Pobierz](https://github.com/miekki-jerry/cmdFlow/releases/latest) &nbsp;·&nbsp; [Autor: bogumilluc.pl](https://bogumilluc.pl)
+
+<img src="docs/screenshots/settings.png" width="620" alt="Ustawienia cmdFlow — Backend AI, providerzy chmurowi i akcje ze skrótami">
+
+</div>
 
 ---
 
-## Funkcje
+## Po co to jest
 
-- **Wiele akcji** — każda to para *globalny skrót + prompt*. Jedna tłumaczy na angielski, druga poprawia gramatykę, trzecia streszcza — jak zdefiniujesz.
-- **Nagrywanie skrótu z animacją** — wciśnij kombinację; aplikacja ostrzega, gdy koliduje z popularnym skrótem systemowym i wymaga modyfikatora (⌘/⌃/⌥).
-- **W 100% on-device** — model Apple Intelligence działa lokalnie. Tekst nie opuszcza komputera.
-- **Opcjonalny OpenRouter** — własny klucz API dla dowolnego języka/modelu (patrz niżej).
-- **Uruchamianie przy logowaniu** — jeden przełącznik (`SMAppService`).
-- **Menu bar** — brak ikony w Docku, dyskretna ikona `⌘` ze stanem (praca / sukces / błąd).
+Ciągle kopiuję jakiś fragment i chcę go szybko przerobić — przetłumaczyć, poprawić gramatykę, streścić — bez wklejania do ChatGPT, przełączania okien i kopiowania z powrotem. cmdFlow robi to jednym skrótem, na miejscu:
 
-## Backend AI
+```
+[globalny skrót]  →  tekst ze schowka  →  Twój prompt  →  model AI  →  wynik do schowka
+```
 
-W Ustawieniach wybierasz jeden z trzech trybów:
+Definiujesz **akcje** — każda to para *globalny skrót + prompt*. Jedna tłumaczy na angielski, druga poprawia gramatykę, trzecia streszcza. Kopiujesz tekst, naciskasz skrót, wklejasz wynik.
+
+## Dlaczego trzy providery (i skąd polski problem)
+
+Aplikacja powstała wokół **Apple Foundation Models** — modelu, który działa **lokalnie na Macu**: prywatnie, za darmo, bez kluczy API. Model radzi sobie świetnie w wielu językach (EN/DE/FR/ES/IT/PT/JA/KO/ZH).
+
+Jest jednak jedno konkretne ograniczenie, które wyszło w testach: **polski tekst wejściowy jest odrzucany** przez guardrail modelu (`unsupportedLanguageOrLocale`), niedeterministycznie i bez obejścia po stronie promptu. To ograniczenie Apple, nie aplikacji — polski nie jest jeszcze oficjalnie wspieranym językiem wejściowym Apple Intelligence.
+
+Dlatego cmdFlow ma **trzy tryby backendu**, które można przełączać w Ustawieniach:
 
 | Tryb | Opis |
 |---|---|
-| **Apple (on-device)** | Model Apple Intelligence lokalnie. Prywatny, darmowy, bez klucza. Ograniczone języki (patrz niżej). |
-| **Apple + fallback** | Najpierw Apple; gdy odmówi (np. polski input), automatyczny fallback do OpenRouter. |
-| **OpenRouter** | Każde żądanie do [OpenRouter](https://openrouter.ai) na Twoim kluczu API. Dowolny język i model. |
+| **Apple (on-device)** | Model Apple Intelligence lokalnie. Prywatny, darmowy, bez klucza. Ograniczone języki. |
+| **Apple + fallback** | Najpierw Apple; gdy odmówi (np. polski input), automatyczny fallback do chmury. **Rekomendowane dla polskiego.** |
+| **Chmura** | Każde żądanie do wybranego providera na Twoim kluczu API. Dowolny język i model. |
 
-Dla trybów z OpenRouter: wklej klucz API (przechowywany w **Keychain**, nie w plaintext), wpisz nazwę modelu albo użyj **wyszukiwarki** (przycisk *Szukaj* — pobiera pełną listę modeli OpenRouter z filtrem i oznaczeniem darmowych).
+Provider chmurowy: **OpenRouter** (300+ modeli, wbudowana wyszukiwarka) lub **OpenAI** (`gpt-4o`, `gpt-4o-mini`, `gpt-4.1`, …). Klucz API trzymany jest w **Keychain**, nie w plaintext.
 
-## Wymagania
+## Jak działa
 
-- **macOS 26 (Tahoe) lub nowszy**, **Apple Silicon** (M1+)
-- Tryb Apple: **włączone Apple Intelligence** (Ustawienia systemowe → Apple Intelligence & Siri)
-- Tryb OpenRouter: **klucz API** z [openrouter.ai/keys](https://openrouter.ai/keys) (działa też, gdy urządzenie nie ma Apple Intelligence)
+1. **Skopiuj** dowolny tekst (`⌘C`).
+2. **Naciśnij** swój skrót — cmdFlow czyta schowek i uruchamia prompt.
+3. **Wklej** (`⌘V`) — wynik jest już w schowku.
 
-## Obsługiwane języki (ważne)
+## Funkcje
 
-Model on-device Apple wspiera ograniczony zestaw języków. Przetestowane:
-
-| Scenariusz | Status |
-|---|---|
-| Wejście EN/DE/FR/ES/IT/PT/JA/KO/ZH → dowolna transformacja | ✅ działa |
-| Tłumaczenie **na** polski (np. angielski → polski) | ✅ działa |
-| **Polski tekst wejściowy** | ⚠️ często odrzucany przez guardrail Apple (`unsupported language`) |
-
-> Polski jako język **wejściowy** nie jest jeszcze oficjalnie wspierany przez Apple Intelligence — model potrafi go odrzucić niedeterministycznie. cmdFlow pokazuje wtedy jasny komunikat i ponawia raz. Gdy Apple rozszerzy wsparcie języków w kolejnych wersjach macOS, zadziała bez zmian w aplikacji.
+- 🎹 **Globalne skróty** — Carbon `RegisterEventHotKey`, bez uprawnień Accessibility.
+- ⚙️ **Wiele akcji** — każda z własnym skrótem i promptem, persystencja w UserDefaults.
+- 🔒 **On-device by default** — tekst nie opuszcza Maca, dopóki nie wybierzesz chmury.
+- ☁️ **OpenRouter + OpenAI** — własny klucz (w Keychain), wyszukiwarka modeli OpenRouter.
+- 🎬 **Nagrywanie skrótu z animacją** — fale radaru, keycapy, ostrzeżenie o kolizjach z systemem.
+- 🚀 **Uruchamianie przy logowaniu** — jeden przełącznik (`SMAppService`).
+- 📍 **Menu bar** — bez ikony w Docku; ikona `⌘` zmienia stan (praca / sukces / błąd).
 
 ## Instalacja
 
-Aplikacja jest **niepodpisana** (projekt open-source bez Apple Developer Account), więc Gatekeeper wymaga jednorazowego potwierdzenia:
+Aplikacja jest **niepodpisana** (projekt open-source, bez Apple Developer Account), więc Gatekeeper wymaga jednorazowego potwierdzenia:
 
-1. Pobierz `cmdFlow-x.y.z.dmg` z [Releases](../../releases), otwórz i przeciągnij **cmdFlow** do folderu **Aplikacje**.
-2. Pierwsze uruchomienie: **kliknij prawym przyciskiem na cmdFlow → Otwórz** → *Otwórz*.
-3. Jeśli macOS twierdzi, że aplikacja jest „uszkodzona", zdejmij kwarantannę:
+1. Pobierz `cmdFlow-x.y.z.dmg` z [Releases](https://github.com/miekki-jerry/cmdFlow/releases), otwórz i przeciągnij **cmdFlow** do **Aplikacji**.
+2. Pierwsze uruchomienie: **prawy klik na cmdFlow → Otwórz** → *Otwórz*.
+3. Jeśli macOS twierdzi, że aplikacja jest „uszkodzona":
    ```bash
    xattr -dr com.apple.quarantine /Applications/cmdFlow.app
    ```
 
-## Użycie
+## Wymagania
 
-1. Kliknij ikonę `⌘` w pasku menu → **Ustawienia…**
-2. **Dodaj akcję**, nadaj nazwę, ustaw **skrót** (kliknij pole i wciśnij kombinację) oraz **prompt**.
-3. Skopiuj dowolny tekst (`⌘C`) i naciśnij swój skrót. Wynik jest w schowku (`⌘V`).
-4. Przycisk **Uruchom teraz** testuje akcję na bieżącej zawartości schowka.
-
-**Wskazówka do promptów:** pisz instrukcje po angielsku i konkretnie, np.
-`You are a translation engine. Translate the user's text to English. Output only the translation.`
+- **macOS 26 (Tahoe)+**, **Apple Silicon** (M1+)
+- Tryb Apple: włączone **Apple Intelligence** (Ustawienia systemowe → Apple Intelligence & Siri)
+- Tryb chmurowy: klucz API [OpenRouter](https://openrouter.ai/keys) lub [OpenAI](https://platform.openai.com/api-keys) — działa też, gdy urządzenie nie ma Apple Intelligence
 
 ## Budowanie ze źródeł
 
 ```bash
-git clone https://github.com/<user>/cmdFlow.git
+git clone https://github.com/miekki-jerry/cmdFlow.git
 cd cmdFlow
-swift build -c release          # sama kompilacja
-./Scripts/build_app.sh 0.1.0    # złożenie cmdFlow.app w dist/
-./Scripts/make_release.sh 0.1.0 # + .dmg i .zip
+swift build -c release          # kompilacja
+./Scripts/build_app.sh 0.4.0    # złożenie cmdFlow.app w dist/
+./Scripts/make_release.sh 0.4.0 # + .dmg i .zip
 ```
 
-Wymaga Xcode 26+ / Swift 6.2+.
+Wymaga Xcode 26+ / Swift 6.2+. Aplikacja to pakiet SPM składany do `.app` skryptem — bez pliku `.xcodeproj`.
 
-## Jak to działa (architektura)
+## Architektura
 
 | Komponent | Rola |
 |---|---|
-| `HotKeyManager` | Globalne skróty przez Carbon `RegisterEventHotKey` — bez uprawnień Accessibility |
-| `FoundationModelService` | Warstwa nad `FoundationModels` (`SystemLanguageModel`, `LanguageModelSession`) z retry i obsługą błędów |
-| `OpenRouterService` | Chat completions + listowanie modeli OpenRouter |
-| `Keychain` | Bezpieczne przechowywanie klucza API |
-| `Clipboard` | Odczyt/zapis `NSPasteboard` |
-| `LaunchAtLogin` | Uruchamianie przy logowaniu przez `SMAppService` |
-| `AppState` | Persystencja akcji/ustawień, routing providerów, rejestracja skrótów, stan ikony |
-| `ShortcutRecorder` | Nagrywanie skrótu z animacją (fale radaru, keycapy) i detekcją kolizji |
-| `DesignKit` | Wspólny język wizualny: gradient, karty, keycapy |
+| `HotKeyManager` | Globalne skróty przez Carbon `RegisterEventHotKey` |
+| `FoundationModelService` | Warstwa nad `FoundationModels` z retry i obsługą błędów |
+| `CloudChat` | Wspólny klient chat/completions (OpenAI-compatible) |
+| `OpenRouterService` / `OpenAIService` | Providerzy chmurowi + listowanie modeli OpenRouter |
+| `Keychain` | Bezpieczne przechowywanie kluczy API |
+| `LaunchAtLogin` | Uruchamianie przy logowaniu (`SMAppService`) |
+| `AppState` | Persystencja akcji/ustawień, routing providerów, rejestracja skrótów |
+| `ShortcutRecorder` / `DesignKit` | Animowany recorder i wspólny język wizualny |
 
-Aplikacja to pakiet SPM (`executableTarget`) składany do `.app` skryptem — bez pliku `.xcodeproj`.
+## Autor
+
+Stworzone przez **Bogumił Łuć** — [bogumilluc.pl](https://bogumilluc.pl).
+Landing page: [cmdflow.vercel.app](https://cmdflow.vercel.app)
 
 ## Licencja
 

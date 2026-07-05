@@ -1,13 +1,15 @@
 import Foundation
 import Security
 
-/// Minimalny wrapper Keychain dla jednego sekretu (klucz API OpenRouter).
+/// Minimalny wrapper Keychain dla sekretów (klucze API).
 enum Keychain {
-    private static let service = "pl.bogumilluc.cmdflow"
-    private static let account = "openrouter-api-key"
+    static let openRouterAccount = "openrouter-api-key"
+    static let openAIAccount = "openai-api-key"
 
-    static func set(_ value: String) {
-        delete()
+    private static let service = "pl.bogumilluc.cmdflow"
+
+    static func set(_ value: String, account: String) {
+        delete(account: account)
         guard !value.isEmpty, let data = value.data(using: .utf8) else { return }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -18,7 +20,7 @@ enum Keychain {
         SecItemAdd(query as CFDictionary, nil)
     }
 
-    static func get() -> String {
+    static func get(account: String) -> String {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -34,7 +36,7 @@ enum Keychain {
         return value
     }
 
-    static func delete() {
+    static func delete(account: String) {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,

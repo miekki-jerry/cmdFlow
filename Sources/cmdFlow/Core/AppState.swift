@@ -19,10 +19,16 @@ final class AppState: ObservableObject {
     @Published var settings: AppSettings {
         didSet { persistSettings() }
     }
-    /// Klucz API OpenRouter — przechowywany w Keychain, tu tylko lustro dla UI.
-    @Published var openRouterKey: String {
-        didSet { Keychain.set(openRouterKey) }
+    /// Klucze API — przechowywane w Keychain, tu tylko lustra dla UI.
+    /// Ładowane leniwie (przy otwarciu Ustawień), żeby prompt Keychain nie blokował startu.
+    @Published var openRouterKey: String = "" {
+        didSet { if !isLoadingKeys { Keychain.set(openRouterKey, account: Keychain.openRouterAccount) } }
     }
+    @Published var openAIKey: String = "" {
+        didSet { if !isLoadingKeys { Keychain.set(openAIKey, account: Keychain.openAIAccount) } }
+    }
+    private var isLoadingKeys = false
+    private var keysLoaded = false
     @Published private(set) var modelStatus: ModelStatus = .unavailable("Sprawdzanie…")
     @Published private(set) var activity: Activity = .idle
     @Published private(set) var launchAtLogin: Bool = false
@@ -40,7 +46,6 @@ final class AppState: ObservableObject {
     init() {
         self.actions = AppState.load(key: defaultsKey)
         self.settings = AppState.loadSettings(key: settingsKey)
-        self.openRouterKey = Keychain.get()
         if #available(macOS 26.0, *) {
             modelStatus = FoundationModelService.status()
         } else {
@@ -48,6 +53,18 @@ final class AppState: ObservableObject {
         }
         launchAtLogin = LaunchAtLogin.isEnabled
         reregisterHotKeys()
+    }
+
+    // MARK: - Klucze API (leniwe ładowanie)
+
+    /// Wczytuje klucze z Keychain do luster UI. Wołane przy otwarciu Ustawień.
+    func loadKeys() {
+        guard !keysLoaded else { return }
+        keysLoaded = true
+        isLoadingKeys = true
+        openRouterKey = Keychain.get(account: Keychain.openRouterAccount)
+        openAIKey = Keychain.get(account: Keychain.openAIAccount)
+        isLoadingKeys = false
     }
 
     // MARK: - Uruchamianie przy logowaniu
@@ -118,23 +135,34 @@ final class AppState: ObservableObject {
     /// Kieruje żądanie do właściwego backendu wg wybranego trybu.
     private func generate(instructions: String, input: String) async throws -> String {
         switch settings.providerMode {
-        case .openRouterOnly:
-            return try await OpenRouterService.transform(
-                apiKey: openRouterKey, model: settings.openRouterModel,
-                instructions: instructions, input: input
-            )
+        case .cloud:
+            return try await cloudGenerate(instructions: instructions, input: input)
         case .appleOnly:
             return try await appleGenerate(instructions: instructions, input: input)
         case .appleWithFallback:
             do {
                 return try await appleGenerate(instructions: instructions, input: input)
             } catch {
-                // Apple odmówił (np. język) lub jest niedostępny — próbujemy OpenRouter.
-                return try await OpenRouterService.transform(
-                    apiKey: openRouterKey, model: settings.openRouterModel,
-                    instructions: instructions, input: input
-                )
+                // Apple odmówił (np. język) lub jest niedostępny — próbujemy chmury.
+                return try await cloudGenerate(instructions: instructions, input: input)
             }
+        }
+    }
+
+    private func cloudGenerate(instructions: String, input: String) async throws -> String {
+        switch settings.cloudProvider {
+        case .openRouter:
+            let key = keysLoaded ? openRouterKey : Keychain.get(account: Keychain.openRouterAccount)
+            return try await OpenRouterService.transform(
+                apiKey: key, model: settings.openRouterModel,
+                instructions: instructions, input: input
+            )
+        case .openAI:
+            let key = keysLoaded ? openAIKey : Keychain.get(account: Keychain.openAIAccount)
+            return try await OpenAIService.transform(
+                apiKey: key, model: settings.openAIModel,
+                instructions: instructions, input: input
+            )
         }
     }
 

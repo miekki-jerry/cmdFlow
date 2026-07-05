@@ -18,6 +18,7 @@ struct SettingsView: View {
             footer
         }
         .frame(width: 560, height: 680)
+        .onAppear { app.loadKeys() }
     }
 
     // MARK: - Tło
@@ -199,8 +200,9 @@ private struct ProviderCard: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            if app.settings.providerMode.usesOpenRouter {
+            if app.settings.providerMode.usesCloud {
                 Divider().padding(.vertical, 2)
+                cloudProviderPicker
                 keyField
                 modelField
             }
@@ -211,27 +213,62 @@ private struct ProviderCard: View {
         }
     }
 
-    private var keyField: some View {
+    private var cloudProviderPicker: some View {
         VStack(alignment: .leading, spacing: 5) {
-            SectionLabel("Klucz API OpenRouter")
-            SecureField("sk-or-…", text: $app.openRouterKey)
+            SectionLabel("Provider chmurowy")
+            Picker("", selection: $app.settings.cloudProvider) {
+                ForEach(CloudProvider.allCases) { provider in
+                    Text(provider.label).tag(provider)
+                }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+        }
+    }
+
+    @ViewBuilder private var keyField: some View {
+        let provider = app.settings.cloudProvider
+        VStack(alignment: .leading, spacing: 5) {
+            SectionLabel("Klucz API \(provider.label)")
+            SecureField(provider.keyPlaceholder, text: keyBinding)
                 .textFieldStyle(.roundedBorder)
-            Text("Przechowywany w Keychain. Utworzysz go na openrouter.ai/keys")
+            Text("Przechowywany w Keychain. Utworzysz go na \(provider.keysURL)")
                 .font(.caption2).foregroundStyle(.secondary)
         }
     }
 
-    private var modelField: some View {
+    private var keyBinding: Binding<String> {
+        app.settings.cloudProvider == .openRouter ? $app.openRouterKey : $app.openAIKey
+    }
+
+    @ViewBuilder private var modelField: some View {
         VStack(alignment: .leading, spacing: 5) {
             SectionLabel("Model")
-            HStack(spacing: 8) {
-                TextField("np. openai/gpt-4o-mini", text: $app.settings.openRouterModel)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(.body, design: .monospaced))
-                Button {
-                    showModelPicker = true
-                } label: {
-                    Label("Szukaj", systemImage: "magnifyingglass")
+            if app.settings.cloudProvider == .openRouter {
+                HStack(spacing: 8) {
+                    TextField("np. openai/gpt-4o-mini", text: $app.settings.openRouterModel)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(.body, design: .monospaced))
+                    Button {
+                        showModelPicker = true
+                    } label: {
+                        Label("Szukaj", systemImage: "magnifyingglass")
+                    }
+                }
+            } else {
+                HStack(spacing: 8) {
+                    TextField("np. gpt-4o-mini", text: $app.settings.openAIModel)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(.body, design: .monospaced))
+                    Menu {
+                        ForEach(OpenAIService.suggestedModels, id: \.self) { model in
+                            Button(model) { app.settings.openAIModel = model }
+                        }
+                    } label: {
+                        Label("Modele", systemImage: "list.bullet")
+                    }
+                    .menuStyle(.borderlessButton)
+                    .fixedSize()
                 }
             }
         }
@@ -242,9 +279,9 @@ private struct ProviderCard: View {
         case .appleOnly:
             return "Model on-device Apple. Prywatny i darmowy, ale nie wspiera każdego języka (m.in. polskiego wejściowego)."
         case .appleWithFallback:
-            return "Najpierw Apple on-device; gdy odmówi (np. język), automatyczny fallback do OpenRouter."
-        case .openRouterOnly:
-            return "Każde żądanie idzie do OpenRouter na Twoim kluczu. Dowolny język, koszt wg cennika modelu."
+            return "Najpierw Apple on-device; gdy odmówi (np. język), automatyczny fallback do wybranego providera chmurowego."
+        case .cloud:
+            return "Każde żądanie idzie do wybranego providera na Twoim kluczu. Dowolny język, koszt wg cennika modelu."
         }
     }
 }
