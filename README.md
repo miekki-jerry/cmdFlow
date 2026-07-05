@@ -10,7 +10,7 @@ A macOS app that runs your clipboard text through an AI model under a global key
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![macOS 26+](https://img.shields.io/badge/macOS-26%2B-black?logo=apple)](https://www.apple.com/macos/)
 
-[**Landing page →**](https://cmdflow.vercel.app) &nbsp;·&nbsp; [Download](https://github.com/miekki-jerry/cmdFlow/releases/latest) &nbsp;·&nbsp; [Made by bogumilluc.pl](https://bogumilluc.pl)
+[**Landing page →**](https://cmd-flow-landing.vercel.app) &nbsp;·&nbsp; [Download](https://github.com/miekki-jerry/cmdFlow/releases/latest) &nbsp;·&nbsp; [Made by bogumilluc.pl](https://bogumilluc.pl)
 
 <img src="docs/screenshots/settings_pt1.png" width="380" alt="cmdFlow settings — launch at login, AI backend and API key"> <img src="docs/screenshots/settings_pt2.png" width="380" alt="cmdFlow settings — actions with global shortcuts and prompts">
 
@@ -105,7 +105,7 @@ Requires Xcode 26+ / Swift 6.2+. The app is an SPM package assembled into a `.ap
 ## Author
 
 Made by **Bogumił Łuć** — [bogumilluc.pl](https://bogumilluc.pl).
-Landing page: [cmdflow.vercel.app](https://cmdflow.vercel.app)
+Landing page: [cmd-flow-landing.vercel.app](https://cmd-flow-landing.vercel.app)
 
 ## License
 

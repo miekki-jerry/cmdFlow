@@ -2,7 +2,7 @@ import Foundation
 
 /// Which mode processes the text.
 enum ProviderMode: String, Codable, CaseIterable, Identifiable {
-    case appleOnly            // tylko model on-device Apple
+    case appleOnly            // Apple on-device model only
     case appleWithFallback    // Apple, with a cloud fallback if it refuses
     case cloud                // cloud provider only
 
