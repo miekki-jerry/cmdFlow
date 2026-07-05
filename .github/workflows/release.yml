@@ -31,16 +31,18 @@ jobs:
           body: |
             ## cmdFlow ${{ github.ref_name }}
 
-            Menu-bar app na macOS: globalny skrót → tekst ze schowka → prompt → Apple Foundation Model (on-device) → wynik w schowku.
+            A macOS app that runs clipboard text through an AI model under a global shortcut → on-device (Apple Foundation Model), or via OpenRouter/OpenAI.
 
-            ### Instalacja (aplikacja niepodpisana)
-            1. Pobierz `cmdFlow-${{ steps.version.outputs.version }}.dmg`, otwórz, przeciągnij cmdFlow do Aplikacji.
-            2. Przy pierwszym uruchomieniu: **kliknij prawym na cmdFlow → Otwórz** (Gatekeeper blokuje niepodpisane aplikacje).
-            3. Jeśli macOS twierdzi, że aplikacja jest „uszkodzona":
+            ### Install (unsigned app)
+            1. Download `cmdFlow-${{ steps.version.outputs.version }}.dmg`, open it, and drag cmdFlow to Applications.
+            2. First launch: **right-click cmdFlow → Open** (Gatekeeper blocks unsigned apps).
+            3. If macOS claims the app is "damaged":
                `xattr -dr com.apple.quarantine /Applications/cmdFlow.app`
 
-            ### Wymagania
-            macOS 26+, Apple Silicon, włączone Apple Intelligence.
+            ### Requirements
+            macOS 26+, Apple Silicon. Apple mode needs Apple Intelligence; cloud mode needs an API key.
+
+            Landing: https://cmd-flow-landing.vercel.app
           files: |
             dist/cmdFlow-${{ steps.version.outputs.version }}.dmg
             dist/cmdFlow-${{ steps.version.outputs.version }}.zip
