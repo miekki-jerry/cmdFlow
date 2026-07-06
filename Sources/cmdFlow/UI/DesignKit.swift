@@ -69,6 +69,35 @@ struct Keycap: View {
     }
 }
 
+/// Shimmering sweep over a view's shape — a soft "thinking" effect (muted base +
+/// a bright highlight travelling across), nicer than a spinner.
+struct Shimmer: ViewModifier {
+    @State private var move = false
+
+    func body(content: Content) -> some View {
+        content
+            .overlay {
+                GeometryReader { geo in
+                    let width = geo.size.width
+                    LinearGradient(
+                        colors: [.clear, .white.opacity(0.85), .clear],
+                        startPoint: .leading, endPoint: .trailing
+                    )
+                    .frame(width: max(40, width * 0.45))
+                    .offset(x: move ? width : -width * 0.45)
+                    .animation(.linear(duration: 1.3).repeatForever(autoreverses: false), value: move)
+                }
+                .mask(content)
+                .allowsHitTesting(false)
+            }
+            .onAppear { move = true }
+    }
+}
+
+extension View {
+    func shimmer() -> some View { modifier(Shimmer()) }
+}
+
 /// Animowany wielokropek „…".
 struct AnimatedDots: View {
     @State private var phase = 0

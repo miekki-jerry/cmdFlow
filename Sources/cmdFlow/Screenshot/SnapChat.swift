@@ -215,10 +215,10 @@ private struct SnapChatView: View {
     }
 
     private var thinking: some View {
-        HStack(spacing: 7) {
-            ProgressView().controlSize(.small)
-            Text("Thinking…").font(.callout).foregroundStyle(.secondary)
-        }
+        Text("Thinking…")
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .shimmer()
     }
 
     private var inputBar: some View {
@@ -228,17 +228,13 @@ private struct SnapChatView: View {
                 .lineLimit(1...4)
                 .focused($inputFocused)
                 .onSubmit(submit)
-            if sending {
-                ProgressView().controlSize(.small)
-            } else {
-                Button(action: submit) {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(canSend ? AnyShapeStyle(Palette.gradient) : AnyShapeStyle(Color.secondary))
-                }
-                .buttonStyle(.plain)
-                .disabled(!canSend)
+            Button(action: submit) {
+                Image(systemName: "arrow.up.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(canSend ? AnyShapeStyle(Palette.gradient) : AnyShapeStyle(Color.secondary))
             }
+            .buttonStyle(.plain)
+            .disabled(!canSend)
         }
         .padding(.horizontal, 16).padding(.vertical, 11)
         .background(Capsule().fill(Color.white.opacity(0.10)))
