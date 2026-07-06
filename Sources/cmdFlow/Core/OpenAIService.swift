@@ -4,16 +4,16 @@ import Foundation
 enum OpenAIService {
     /// Common chat models for quick selection in Settings.
     static let suggestedModels = [
-        "gpt-4o-mini",
-        "gpt-4o",
-        "gpt-4.1",
-        "gpt-4.1-mini",
-        "gpt-4.1-nano",
-        "o4-mini"
+        "gpt-5.5",
+        "gpt-5.4",
+        "gpt-5.4-mini",
+        "gpt-5.4-nano",
+        "gpt-5-mini",
+        "gpt-4.1-mini"
     ]
 
     /// Vision-capable OpenAI models suggested for the screenshot chat.
-    static let suggestedVisionModels = ["gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini"]
+    static let suggestedVisionModels = ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-4o"]
 
     private static let endpoint = URL(string: "https://api.openai.com/v1/chat/completions")!
 

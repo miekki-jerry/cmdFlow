@@ -53,22 +53,23 @@ enum CloudProvider: String, Codable, CaseIterable, Identifiable {
 struct AppSettings: Codable, Equatable {
     var providerMode: ProviderMode = .appleOnly
     var cloudProvider: CloudProvider = .openRouter
-    var openRouterModel: String = "openai/gpt-4o-mini"
-    var openAIModel: String = "gpt-4o-mini"
+    var openRouterModel: String = "openai/gpt-5.4-mini"
+    var openAIModel: String = "gpt-5.4-mini"
 
-    // Screenshot chat (vision). Uses the cloud provider — Apple's model is text-only.
+    // Screenshot chat (vision). Cloud-only — Apple's model is text-only. Has its own provider.
     var screenshotChatEnabled: Bool = false
     var screenshotKeyCode: UInt32? = nil
     var screenshotModifiers: UInt32 = 0
-    var openRouterVisionModel: String = "openai/gpt-4o"
-    var openAIVisionModel: String = "gpt-4o"
+    var screenshotProvider: CloudProvider = .openRouter
+    var openRouterVisionModel: String = "openai/gpt-5.4"
+    var openAIVisionModel: String = "gpt-5.4"
 
     init() {}
 
     enum CodingKeys: String, CodingKey {
         case providerMode, cloudProvider, openRouterModel, openAIModel
         case screenshotChatEnabled, screenshotKeyCode, screenshotModifiers
-        case openRouterVisionModel, openAIVisionModel
+        case screenshotProvider, openRouterVisionModel, openAIVisionModel
     }
 }
 
@@ -97,13 +98,15 @@ extension AppSettings {
             cloudProvider = CloudProvider(rawValue: rawCloud ?? "openRouter") ?? .openRouter
         }
 
-        openRouterModel = ((try? c.decodeIfPresent(String.self, forKey: .openRouterModel)) ?? nil) ?? "openai/gpt-4o-mini"
-        openAIModel = ((try? c.decodeIfPresent(String.self, forKey: .openAIModel)) ?? nil) ?? "gpt-4o-mini"
+        openRouterModel = ((try? c.decodeIfPresent(String.self, forKey: .openRouterModel)) ?? nil) ?? "openai/gpt-5.4-mini"
+        openAIModel = ((try? c.decodeIfPresent(String.self, forKey: .openAIModel)) ?? nil) ?? "gpt-5.4-mini"
 
         screenshotChatEnabled = ((try? c.decodeIfPresent(Bool.self, forKey: .screenshotChatEnabled)) ?? nil) ?? false
         screenshotKeyCode = (try? c.decodeIfPresent(UInt32.self, forKey: .screenshotKeyCode)) ?? nil
         screenshotModifiers = ((try? c.decodeIfPresent(UInt32.self, forKey: .screenshotModifiers)) ?? nil) ?? 0
-        openRouterVisionModel = ((try? c.decodeIfPresent(String.self, forKey: .openRouterVisionModel)) ?? nil) ?? "openai/gpt-4o"
-        openAIVisionModel = ((try? c.decodeIfPresent(String.self, forKey: .openAIVisionModel)) ?? nil) ?? "gpt-4o"
+        let rawShotProvider = (try? c.decodeIfPresent(String.self, forKey: .screenshotProvider)) ?? nil
+        screenshotProvider = CloudProvider(rawValue: rawShotProvider ?? "openRouter") ?? .openRouter
+        openRouterVisionModel = ((try? c.decodeIfPresent(String.self, forKey: .openRouterVisionModel)) ?? nil) ?? "openai/gpt-5.4"
+        openAIVisionModel = ((try? c.decodeIfPresent(String.self, forKey: .openAIVisionModel)) ?? nil) ?? "gpt-5.4"
     }
 }

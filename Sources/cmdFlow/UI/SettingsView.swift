@@ -6,30 +6,22 @@ struct SettingsView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            ScrollView {
-                VStack(spacing: 14) {
-                    GeneralCard()
-                    ProviderCard()
-                    ScreenshotCard()
-                    actionsSection
-                }
-                .padding(18)
+            TabView {
+                ActionsTab()
+                    .environmentObject(app)
+                    .tabItem { Label("Actions", systemImage: "command") }
+                ScreenshotTab()
+                    .environmentObject(app)
+                    .tabItem { Label("Screenshot", systemImage: "text.viewfinder") }
+                GeneralTab()
+                    .environmentObject(app)
+                    .tabItem { Label("General", systemImage: "gearshape") }
             }
-            .background(backgroundGradient)
+            .padding(.top, 8)
             footer
         }
-        .frame(width: 560, height: 680)
+        .frame(width: 560, height: 720)
         .onAppear { app.loadKeys() }
-    }
-
-    // MARK: - Background
-
-    private var backgroundGradient: some View {
-        LinearGradient(
-            colors: [Palette.accentA.opacity(0.05), Palette.accentB.opacity(0.02), .clear],
-            startPoint: .top, endPoint: .bottom
-        )
-        .ignoresSafeArea()
     }
 
     // MARK: - Header
@@ -81,7 +73,51 @@ struct SettingsView: View {
         .frame(maxWidth: 230, alignment: .trailing)
     }
 
-    // MARK: - Actions section
+    // MARK: - Footer
+
+    private var footer: some View {
+        HStack {
+            Text("© LUC LABS · v\(appVersion)")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Button("Quit") {
+                NSApplication.shared.terminate(nil)
+            }
+            .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 12)
+        .background(.bar)
+    }
+
+    private var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev"
+    }
+}
+
+// MARK: - Actions tab
+
+private struct ActionsTab: View {
+    @EnvironmentObject var app: AppState
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 14) {
+                ProviderCard()
+                actionsSection
+                Button(action: app.addAction) {
+                    Label("Add action", systemImage: "plus")
+                        .font(.callout.weight(.medium))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Palette.accentB)
+                .controlSize(.large)
+            }
+            .padding(18)
+        }
+    }
 
     private var actionsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -119,41 +155,67 @@ struct SettingsView: View {
         .padding(.vertical, 28)
         .card()
     }
+}
 
-    // MARK: - Footer
+// MARK: - Screenshot tab
 
-    private var footer: some View {
-        VStack(spacing: 8) {
-            HStack {
-                Button(action: app.addAction) {
-                    Label("Add action", systemImage: "plus")
-                        .font(.callout.weight(.medium))
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(Palette.accentB)
-                Spacer()
-                Button("Quit") {
-                    NSApplication.shared.terminate(nil)
-                }
-                .foregroundStyle(.secondary)
-            }
-            Text("© LUC LABS · v\(appVersion)")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+private struct ScreenshotTab: View {
+    @EnvironmentObject var app: AppState
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 14) { ScreenshotCard() }
+                .padding(18)
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 12)
-        .background(.bar)
-    }
-
-    private var appVersion: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev"
     }
 }
 
-// MARK: - General (launch at login)
+// MARK: - General tab (keys + launch at login)
 
-private struct GeneralCard: View {
+private struct GeneralTab: View {
+    @EnvironmentObject var app: AppState
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 14) {
+                KeysCard()
+                LaunchAtLoginCard()
+            }
+            .padding(18)
+        }
+    }
+}
+
+private struct KeysCard: View {
+    @EnvironmentObject var app: AppState
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "key.fill").foregroundStyle(Palette.accentB)
+                Text("API keys").font(.system(.body, weight: .semibold))
+                Spacer()
+            }
+            Text("Stored in the macOS Keychain. Used by the cloud providers (text actions and screenshot chat).")
+                .font(.caption2).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            keyField(.openRouter, binding: $app.openRouterKey)
+            keyField(.openAI, binding: $app.openAIKey)
+        }
+        .card()
+    }
+
+    private func keyField(_ provider: CloudProvider, binding: Binding<String>) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            SectionLabel("\(provider.label) API key")
+            SecureField(provider.keyPlaceholder, text: binding)
+                .textFieldStyle(.roundedBorder)
+            Text("Create one at \(provider.keysURL)")
+                .font(.caption2).foregroundStyle(.secondary)
+        }
+    }
+}
+
+private struct LaunchAtLoginCard: View {
     @EnvironmentObject var app: AppState
 
     var body: some View {
@@ -181,7 +243,7 @@ private struct GeneralCard: View {
     }
 }
 
-// MARK: - Provider configuration
+// MARK: - Text provider configuration
 
 private struct ProviderCard: View {
     @EnvironmentObject var app: AppState
@@ -210,11 +272,12 @@ private struct ProviderCard: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            if app.settings.providerMode.usesCloud || app.settings.screenshotChatEnabled {
+            if app.settings.providerMode.usesCloud {
                 Divider().padding(.vertical, 2)
                 cloudProviderPicker
-                keyField
                 modelField
+                Text("Set the API key in the General tab.")
+                    .font(.caption2).foregroundStyle(.secondary)
             }
         }
         .card()
@@ -236,38 +299,21 @@ private struct ProviderCard: View {
         }
     }
 
-    @ViewBuilder private var keyField: some View {
-        let provider = app.settings.cloudProvider
-        VStack(alignment: .leading, spacing: 5) {
-            SectionLabel("\(provider.label) API key")
-            SecureField(provider.keyPlaceholder, text: keyBinding)
-                .textFieldStyle(.roundedBorder)
-            Text("Stored in Keychain. Create one at \(provider.keysURL)")
-                .font(.caption2).foregroundStyle(.secondary)
-        }
-    }
-
-    private var keyBinding: Binding<String> {
-        app.settings.cloudProvider == .openRouter ? $app.openRouterKey : $app.openAIKey
-    }
-
     @ViewBuilder private var modelField: some View {
         VStack(alignment: .leading, spacing: 5) {
             SectionLabel("Model")
             if app.settings.cloudProvider == .openRouter {
                 HStack(spacing: 8) {
-                    TextField("e.g. openai/gpt-4o-mini", text: $app.settings.openRouterModel)
+                    TextField("e.g. openai/gpt-5.4-mini", text: $app.settings.openRouterModel)
                         .textFieldStyle(.roundedBorder)
                         .font(.system(.body, design: .monospaced))
-                    Button {
-                        showModelPicker = true
-                    } label: {
+                    Button { showModelPicker = true } label: {
                         Label("Search", systemImage: "magnifyingglass")
                     }
                 }
             } else {
                 HStack(spacing: 8) {
-                    TextField("e.g. gpt-4o-mini", text: $app.settings.openAIModel)
+                    TextField("e.g. gpt-5.4-mini", text: $app.settings.openAIModel)
                         .textFieldStyle(.roundedBorder)
                         .font(.system(.body, design: .monospaced))
                     Menu {
@@ -305,7 +351,7 @@ private struct ScreenshotCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
-                Image(systemName: "sparkles.rectangle.stack")
+                Image(systemName: "text.viewfinder")
                     .foregroundStyle(Palette.accentB)
                 Text("Screenshot chat")
                     .font(.system(.body, weight: .semibold))
@@ -313,7 +359,7 @@ private struct ScreenshotCard: View {
                 Toggle("", isOn: $app.settings.screenshotChatEnabled)
                     .labelsHidden().toggleStyle(.switch)
             }
-            Text("Press a shortcut, drag to select a screen region, then ask a vision model about it. Uses the cloud provider — Apple's on-device model can't read images.")
+            Text("Press a shortcut, drag to select a screen region, then ask a vision model about it. Cloud-only — Apple's on-device model can't read images.")
                 .font(.caption2).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -322,7 +368,21 @@ private struct ScreenshotCard: View {
                     SectionLabel("Shortcut")
                     ShortcutRecorder(keyCode: $app.settings.screenshotKeyCode, modifiers: $app.settings.screenshotModifiers)
                 }
+
+                VStack(alignment: .leading, spacing: 5) {
+                    SectionLabel("Provider")
+                    Picker("", selection: $app.settings.screenshotProvider) {
+                        ForEach(CloudProvider.allCases) { provider in
+                            Text(provider.label).tag(provider)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                }
+
                 visionModelField
+                Text("Set the API key in the General tab.")
+                    .font(.caption2).foregroundStyle(.secondary)
             }
         }
         .card()
@@ -333,10 +393,10 @@ private struct ScreenshotCard: View {
 
     @ViewBuilder private var visionModelField: some View {
         VStack(alignment: .leading, spacing: 5) {
-            SectionLabel("Vision model · \(app.settings.cloudProvider.label)")
-            if app.settings.cloudProvider == .openRouter {
+            SectionLabel("Vision model")
+            if app.settings.screenshotProvider == .openRouter {
                 HStack(spacing: 8) {
-                    TextField("e.g. openai/gpt-4o", text: $app.settings.openRouterVisionModel)
+                    TextField("e.g. openai/gpt-5.4", text: $app.settings.openRouterVisionModel)
                         .textFieldStyle(.roundedBorder).font(.system(.body, design: .monospaced))
                     Button { showVisionPicker = true } label: {
                         Label("Search", systemImage: "magnifyingglass")
@@ -344,7 +404,7 @@ private struct ScreenshotCard: View {
                 }
             } else {
                 HStack(spacing: 8) {
-                    TextField("e.g. gpt-4o", text: $app.settings.openAIVisionModel)
+                    TextField("e.g. gpt-5.4", text: $app.settings.openAIVisionModel)
                         .textFieldStyle(.roundedBorder).font(.system(.body, design: .monospaced))
                     Menu {
                         ForEach(OpenAIService.suggestedVisionModels, id: \.self) { model in

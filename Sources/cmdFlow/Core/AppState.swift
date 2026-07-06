@@ -149,7 +149,7 @@ final class AppState: ObservableObject {
         let instructions = "You are a helpful assistant answering questions about the attached screenshot. Be concise and specific."
         do {
             let answer: String
-            switch settings.cloudProvider {
+            switch settings.screenshotProvider {
             case .openRouter:
                 answer = try await OpenRouterService.transformVision(
                     apiKey: Keychain.get(account: Keychain.openRouterAccount),
