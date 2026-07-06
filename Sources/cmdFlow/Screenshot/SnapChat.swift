@@ -82,6 +82,7 @@ private struct SnapChatView: View {
     @State private var sending = false
     @State private var glow = false
     @State private var atBottom = true
+    @State private var expanded = false
 
     private let bottomID = "snap-bottom"
 
@@ -147,8 +148,9 @@ private struct SnapChatView: View {
             }
             inputBar
         }
-        .frame(width: 480)
-        .frame(minHeight: 380, maxHeight: 760)
+        .frame(width: expanded ? 660 : 480)
+        .frame(minHeight: 380, maxHeight: expanded ? 920 : 760)
+        .animation(.spring(response: 0.4, dampingFraction: 0.82), value: expanded)
         .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(
@@ -156,7 +158,12 @@ private struct SnapChatView: View {
                 .strokeBorder(Color.white.opacity(0.08))
         )
         .overlay(alignment: .topLeading) { circleButton("xmark", action: onClose).padding(14) }
-        .overlay(alignment: .topTrailing) { circleButton("doc.on.doc", action: copyLastAnswer).padding(14) }
+        .overlay(alignment: .topTrailing) {
+            circleButton(expanded ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right") {
+                expanded.toggle()
+            }
+            .padding(14)
+        }
         .shadow(color: .black.opacity(0.45), radius: 30, y: 12)
         .onAppear {
             withAnimation(.spring(response: 0.55, dampingFraction: 0.6)) { glow = true }
@@ -289,11 +296,6 @@ private struct SnapChatView: View {
         }
         sending = false
         persist(turns)
-    }
-
-    private func copyLastAnswer() {
-        guard let last = turns.last(where: { !$0.user })?.text else { return }
-        Clipboard.writeString(last)
     }
 
     private func scrollToBottom(_ proxy: ScrollViewProxy) {

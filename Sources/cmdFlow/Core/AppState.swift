@@ -163,7 +163,8 @@ final class AppState: ObservableObject {
     }
 
     private func beginSession(imageBase64: String, image: NSImage, firstQuestion: String) {
-        promptPill.close() // keep the backdrop; hand over to the chat panel
+        promptPill.close()      // keep the backdrop dim; hand over to the chat panel
+        backdrop.hideHighlight() // hide the lit region — the chat shows its own thumbnail
         let session = SnapSession(createdAt: Date(), imageBase64: imageBase64,
                                   turns: [SnapTurn(user: true, text: firstQuestion)])
         history.upsert(session)
