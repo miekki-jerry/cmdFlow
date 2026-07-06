@@ -17,11 +17,10 @@ enum OpenRouterService {
         )
     }
 
-    static func transformVision(apiKey: String, model: String, instructions: String, input: String, imageBase64PNG: String) async throws -> String {
-        try await CloudChat.complete(
+    static func chat(apiKey: String, bodyData: Data) async throws -> String {
+        try await CloudChat.postJSON(
             endpoint: endpoint, providerName: "OpenRouter",
-            apiKey: apiKey, model: model, instructions: instructions, input: input,
-            imageBase64PNG: imageBase64PNG, extraHeaders: headers
+            apiKey: apiKey, bodyData: bodyData, extraHeaders: headers
         )
     }
 

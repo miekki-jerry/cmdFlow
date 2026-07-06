@@ -61,12 +61,35 @@ enum ScreenCapture {
         }
     }
 
-    /// Base64-encoded PNG of an image (for vision API image_url data URLs).
-    static func pngBase64(_ image: NSImage) -> String? {
-        guard let tiff = image.tiffRepresentation,
+    /// Base64-encoded PNG of an image, downscaled so the longest side is at most
+    /// `maxDimension` points (keeps history small and vision requests cheaper).
+    static func pngBase64(_ image: NSImage, maxDimension: CGFloat = 1400) -> String? {
+        let scaled = downscaled(image, maxDimension: maxDimension)
+        guard let tiff = scaled.tiffRepresentation,
               let rep = NSBitmapImageRep(data: tiff),
               let png = rep.representation(using: .png, properties: [:])
         else { return nil }
         return png.base64EncodedString()
+    }
+
+    private static func downscaled(_ image: NSImage, maxDimension: CGFloat) -> NSImage {
+        let size = image.size
+        let longest = max(size.width, size.height)
+        guard longest > maxDimension, longest > 0 else { return image }
+        let factor = maxDimension / longest
+        let newSize = NSSize(width: size.width * factor, height: size.height * factor)
+        let out = NSImage(size: newSize)
+        out.lockFocus()
+        image.draw(in: NSRect(origin: .zero, size: newSize),
+                   from: NSRect(origin: .zero, size: size),
+                   operation: .copy, fraction: 1.0)
+        out.unlockFocus()
+        return out
+    }
+
+    /// Reconstructs an NSImage from a base64 PNG (for reopening history sessions).
+    static func image(fromBase64PNG base64: String) -> NSImage? {
+        guard let data = Data(base64Encoded: base64) else { return nil }
+        return NSImage(data: data)
     }
 }

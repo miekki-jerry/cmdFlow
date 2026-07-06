@@ -42,7 +42,7 @@ So cmdFlow ships **three backend modes**, switchable in Settings:
 | **Apple + fallback** | Apple first; if it refuses (e.g. Polish input), automatic fallback to the cloud. **Recommended for Polish.** |
 | **Cloud** | Every request goes to the selected provider on your own API key. Any language, any model. |
 
-Cloud provider: **OpenRouter** (300+ models, built-in search) or **OpenAI** (`gpt-4o`, `gpt-4o-mini`, `gpt-4.1`, …). Your API key is stored in the **Keychain**, never in plain text.
+Cloud provider: **OpenRouter** (300+ models, built-in search) or **OpenAI** (`gpt-5.5`, `gpt-5.4`, `gpt-5.4-mini`, …). Your API key is stored in the **Keychain**, never in plain text.
 
 ## How it works
 
@@ -54,7 +54,7 @@ Cloud provider: **OpenRouter** (300+ models, built-in search) or **OpenAI** (`gp
 
 - 🎹 **Global shortcuts** — Carbon `RegisterEventHotKey`, no Accessibility permission.
 - ⚙️ **Multiple actions** — each with its own shortcut and prompt, persisted locally.
-- 📸 **Screenshot chat (vision)** — a shortcut drops a CleanShot-style region selector; the capture glows into a floating chat where you ask a vision model about it. Cloud-only (OpenRouter/OpenAI) — Apple's on-device model is text-only.
+- 📸 **Screenshot chat (vision)** — a shortcut drops a region selector; a focused prompt pill appears, then a floating multi-turn chat about the capture (continue the conversation, history in the Chats tab, editable system prompt). Cloud-only (OpenRouter/OpenAI) — Apple's on-device model is text-only.
 - 🔒 **On-device by default** — your text never leaves the Mac until you pick a cloud provider.
 - ☁️ **OpenRouter + OpenAI** — your own key (in the Keychain), plus an OpenRouter model search.
 - 🎬 **Animated shortcut recorder** — radar pulse, keycaps, and a warning on system collisions.

@@ -13,6 +13,9 @@ struct SettingsView: View {
                 ScreenshotTab()
                     .environmentObject(app)
                     .tabItem { Label("Screenshot", systemImage: "text.viewfinder") }
+                ChatsTab(history: app.history)
+                    .environmentObject(app)
+                    .tabItem { Label("Chats", systemImage: "bubble.left.and.bubble.right") }
                 GeneralTab()
                     .environmentObject(app)
                     .tabItem { Label("General", systemImage: "gearshape") }
@@ -165,6 +168,95 @@ private struct ScreenshotTab: View {
         ScrollView {
             VStack(spacing: 14) { ScreenshotCard() }
                 .padding(18)
+        }
+    }
+}
+
+// MARK: - Chats tab (screenshot history)
+
+private struct ChatsTab: View {
+    @ObservedObject var history: SnapHistory
+    @EnvironmentObject var app: AppState
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 10) {
+                if history.sessions.isEmpty {
+                    VStack(spacing: 8) {
+                        Image(systemName: "bubble.left.and.bubble.right")
+                            .font(.largeTitle).foregroundStyle(Palette.gradient)
+                        Text("No screenshot chats yet")
+                            .font(.headline)
+                        Text("Ask about a screenshot and it will show up here.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 40)
+                    .card()
+                } else {
+                    HStack {
+                        SectionLabel("Screenshot chats")
+                        Spacer()
+                        Button("Clear all") { history.clear() }
+                            .font(.caption2).buttonStyle(.plain).foregroundStyle(.secondary)
+                    }
+                    ForEach(history.sessions) { session in
+                        SessionRow(session: session)
+                            .environmentObject(app)
+                            .environmentObject(history)
+                    }
+                }
+            }
+            .padding(18)
+        }
+    }
+}
+
+private struct SessionRow: View {
+    let session: SnapSession
+    @EnvironmentObject var app: AppState
+    @EnvironmentObject var history: SnapHistory
+
+    var body: some View {
+        Button {
+            app.reopenSession(session)
+        } label: {
+            HStack(spacing: 12) {
+                thumbnail
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(session.title)
+                        .font(.system(.callout, weight: .medium))
+                        .lineLimit(2)
+                    Text("\(session.turns.filter { !$0.user }.count) replies · \(session.createdAt.formatted(date: .abbreviated, time: .shortened))")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button {
+                    withAnimation { history.delete(session) }
+                } label: {
+                    Image(systemName: "trash").foregroundStyle(.secondary)
+                }
+                .buttonStyle(.borderless)
+            }
+        }
+        .buttonStyle(.plain)
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor).opacity(0.6))
+        )
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.secondary.opacity(0.15)))
+    }
+
+    @ViewBuilder private var thumbnail: some View {
+        if let image = ScreenCapture.image(fromBase64PNG: session.imageBase64) {
+            Image(nsImage: image)
+                .resizable().scaledToFill()
+                .frame(width: 44, height: 44)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        } else {
+            RoundedRectangle(cornerRadius: 8).fill(Color.secondary.opacity(0.2))
+                .frame(width: 44, height: 44)
         }
     }
 }
@@ -381,6 +473,7 @@ private struct ScreenshotCard: View {
                 }
 
                 visionModelField
+                systemPromptField
                 Text("Set the API key in the General tab.")
                     .font(.caption2).foregroundStyle(.secondary)
             }
@@ -388,6 +481,26 @@ private struct ScreenshotCard: View {
         .card()
         .sheet(isPresented: $showVisionPicker) {
             ModelPickerSheet(selected: $app.settings.openRouterVisionModel)
+        }
+    }
+
+    private var systemPromptField: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack {
+                SectionLabel("System prompt")
+                Spacer()
+                Button("Reset") {
+                    app.settings.screenshotSystemPrompt = AppSettings.defaultScreenshotSystemPrompt
+                }
+                .font(.caption2).buttonStyle(.plain).foregroundStyle(Palette.accentB)
+            }
+            TextEditor(text: $app.settings.screenshotSystemPrompt)
+                .font(.system(.callout, design: .rounded))
+                .scrollContentBackground(.hidden)
+                .frame(height: 60)
+                .padding(8)
+                .background(RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Color(nsColor: .textBackgroundColor)))
+                .overlay(RoundedRectangle(cornerRadius: 9, style: .continuous).strokeBorder(Color.primary.opacity(0.1)))
         }
     }
 

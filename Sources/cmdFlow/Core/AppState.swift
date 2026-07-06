@@ -33,9 +33,12 @@ final class AppState: ObservableObject {
     @Published private(set) var activity: Activity = .idle
     @Published private(set) var launchAtLogin: Bool = false
 
+    let history = SnapHistory()
+
     private let hotKeys = HotKeyManager()
     private let regionSelector = RegionSelector()
     private let snapChat = SnapChatController()
+    private let promptPill = SnapPromptPill()
     private let defaultsKey = "cmdflow.actions.v1"
     private let settingsKey = "cmdflow.settings.v1"
     private var resetTask: Task<Void, Never>?
@@ -118,11 +121,16 @@ final class AppState: ObservableObject {
     func startScreenshotChat() {
         regionSelector.begin { [weak self] rect, screen in
             guard let self, let rect, let screen else { return }
-            Task { await self.captureAndPresent(rect: rect, screen: screen) }
+            Task { await self.captureAndPromptPill(rect: rect, screen: screen) }
         }
     }
 
-    private func captureAndPresent(rect: CGRect, screen: NSScreen) async {
+    /// Reopens a saved session from the Chats tab.
+    func reopenSession(_ session: SnapSession) {
+        openPanel(session: session, image: ScreenCapture.image(fromBase64PNG: session.imageBase64))
+    }
+
+    private func captureAndPromptPill(rect: CGRect, screen: NSScreen) async {
         guard let displayID = screen.displayID else {
             setActivity(.failure("Couldn't find the display")); return
         }
@@ -135,38 +143,91 @@ final class AppState: ObservableObject {
                 setActivity(.failure("Couldn't encode the screenshot")); return
             }
             playSound("Glass")
-            snapChat.present(image: image) { [weak self] question in
-                guard let self else { return SnapReply.failure("cmdFlow is unavailable") }
-                return await self.askVision(question: question, imageBase64: base64)
-            }
+            promptPill.present(near: rect, onSubmit: { [weak self] question in
+                self?.beginSession(imageBase64: base64, image: image, firstQuestion: question)
+            }, onCancel: {})
         } catch {
             setActivity(.failure(error.localizedDescription))
             NSSound.beep()
         }
     }
 
-    private func askVision(question: String, imageBase64: String) async -> SnapReply {
-        let instructions = "You are a helpful assistant answering questions about the attached screenshot. Be concise and specific."
-        do {
-            let answer: String
-            switch settings.screenshotProvider {
-            case .openRouter:
-                answer = try await OpenRouterService.transformVision(
-                    apiKey: Keychain.get(account: Keychain.openRouterAccount),
-                    model: settings.openRouterVisionModel,
-                    instructions: instructions, input: question, imageBase64PNG: imageBase64
-                )
-            case .openAI:
-                answer = try await OpenAIService.transformVision(
-                    apiKey: Keychain.get(account: Keychain.openAIAccount),
-                    model: settings.openAIVisionModel,
-                    instructions: instructions, input: question, imageBase64PNG: imageBase64
-                )
+    private func beginSession(imageBase64: String, image: NSImage, firstQuestion: String) {
+        let session = SnapSession(createdAt: Date(), imageBase64: imageBase64,
+                                  turns: [SnapTurn(user: true, text: firstQuestion)])
+        history.upsert(session)
+        openPanel(session: session, image: image)
+    }
+
+    private func openPanel(session: SnapSession, image: NSImage?) {
+        let sessionID = session.id
+        let createdAt = session.createdAt
+        let base64 = session.imageBase64
+        snapChat.present(
+            image: image,
+            initialTurns: session.turns,
+            send: { [weak self] turns in
+                guard let self else { return SnapReply.failure("cmdFlow is unavailable") }
+                return await self.answer(for: turns, imageBase64: base64)
+            },
+            persist: { [weak self] turns in
+                self?.history.upsert(SnapSession(id: sessionID, createdAt: createdAt,
+                                                 imageBase64: base64, turns: turns))
             }
-            return .answer(answer)
+        )
+    }
+
+    private func answer(for turns: [SnapTurn], imageBase64: String) async -> SnapReply {
+        let provider = settings.screenshotProvider
+        let model = provider == .openRouter ? settings.openRouterVisionModel : settings.openAIVisionModel
+        guard !model.trimmingCharacters(in: .whitespaces).isEmpty else {
+            return .failure("No vision model selected.")
+        }
+        let messages = buildMessages(turns: turns, imageBase64: imageBase64,
+                                     systemPrompt: settings.screenshotSystemPrompt)
+        // Serialize on the main actor so only Sendable `Data` crosses isolation.
+        let bodyData: Data
+        do {
+            bodyData = try JSONSerialization.data(withJSONObject: ["model": model, "messages": messages])
+        } catch {
+            return .failure("Couldn't build the request.")
+        }
+        do {
+            let content: String
+            switch provider {
+            case .openRouter:
+                content = try await OpenRouterService.chat(
+                    apiKey: Keychain.get(account: Keychain.openRouterAccount), bodyData: bodyData)
+            case .openAI:
+                content = try await OpenAIService.chat(
+                    apiKey: Keychain.get(account: Keychain.openAIAccount), bodyData: bodyData)
+            }
+            return .answer(content)
         } catch {
             return .failure(error.localizedDescription)
         }
+    }
+
+    /// Builds the OpenAI-format messages array; the image is attached to the first user turn.
+    private func buildMessages(turns: [SnapTurn], imageBase64: String, systemPrompt: String) -> [[String: Any]] {
+        var messages: [[String: Any]] = [["role": "system", "content": systemPrompt]]
+        var attachedImage = false
+        for turn in turns {
+            if turn.user {
+                if !attachedImage {
+                    attachedImage = true
+                    messages.append(["role": "user", "content": [
+                        ["type": "text", "text": turn.text],
+                        ["type": "image_url", "image_url": ["url": "data:image/png;base64,\(imageBase64)"]]
+                    ]])
+                } else {
+                    messages.append(["role": "user", "content": turn.text])
+                }
+            } else {
+                messages.append(["role": "assistant", "content": turn.text])
+            }
+        }
+        return messages
     }
 
     // MARK: - Running

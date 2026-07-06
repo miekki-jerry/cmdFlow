@@ -12,16 +12,21 @@ final class FloatingPanel: NSPanel {
     override var canBecomeMain: Bool { true }
 }
 
-/// Floating panel that shows the captured screenshot and a vision chat about it,
-/// styled after Apple's visual-intelligence look.
+/// Floating chat panel about a captured screenshot, styled after Apple/ChatGPT.
 @MainActor
 final class SnapChatController {
     private var panel: FloatingPanel?
 
-    func present(image: NSImage, send: @escaping (String) async -> SnapReply) {
-        let view = SnapChatView(image: image, send: send) { [weak self] in
-            self?.close()
-        }
+    func present(
+        image: NSImage?,
+        initialTurns: [SnapTurn],
+        send: @escaping ([SnapTurn]) async -> SnapReply,
+        persist: @escaping ([SnapTurn]) -> Void
+    ) {
+        let view = SnapChatView(
+            image: image, initialTurns: initialTurns, send: send, persist: persist,
+            onClose: { [weak self] in self?.close() }
+        )
         let hosting = NSHostingController(rootView: view)
         let panel = FloatingPanel(contentViewController: hosting)
         panel.styleMask = [.borderless, .nonactivatingPanel]
@@ -47,94 +52,104 @@ final class SnapChatController {
 }
 
 private struct SnapChatView: View {
-    let image: NSImage
-    let send: (String) async -> SnapReply
+    let image: NSImage?
+    let send: ([SnapTurn]) async -> SnapReply
+    let persist: ([SnapTurn]) -> Void
     let onClose: () -> Void
 
+    @State private var turns: [SnapTurn]
     @State private var input = ""
-    @State private var messages: [Msg] = []
     @State private var sending = false
     @State private var glow = false
-    @State private var expanded = false
 
-    private struct Msg: Identifiable {
-        let id = UUID()
-        let user: Bool
-        let text: String
+    init(image: NSImage?, initialTurns: [SnapTurn],
+         send: @escaping ([SnapTurn]) async -> SnapReply,
+         persist: @escaping ([SnapTurn]) -> Void,
+         onClose: @escaping () -> Void) {
+        self.image = image
+        self.send = send
+        self.persist = persist
+        self.onClose = onClose
+        _turns = State(initialValue: initialTurns)
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    thumbnail
-                    ForEach(messages) { msg in
-                        if msg.user {
-                            HStack { Spacer(minLength: 44); questionBubble(msg.text) }
-                        } else {
-                            answerText(msg.text)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 14) {
+                        thumbnail
+                        ForEach(turns) { turn in
+                            if turn.user {
+                                HStack { Spacer(minLength: 48); questionBubble(turn.text) }
+                            } else {
+                                answerText(turn.text)
+                            }
                         }
+                        if sending { thinking }
+                        Color.clear.frame(height: 1).id(bottomID)
                     }
-                    if sending { thinking }
+                    .padding(.horizontal, 18)
+                    .padding(.top, 52)
+                    .padding(.bottom, 14)
                 }
-                .padding(.horizontal, 18)
-                .padding(.top, 52)
-                .padding(.bottom, 14)
+                .onChange(of: turns) { scrollToBottom(proxy) }
+                .onChange(of: sending) { scrollToBottom(proxy) }
             }
-            inputPill
+            inputBar
         }
-        .frame(width: expanded ? 560 : 440)
-        .frame(minHeight: 260, maxHeight: expanded ? 700 : 560)
+        .frame(width: 480)
+        .frame(minHeight: 340, maxHeight: 680)
         .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .strokeBorder(Color.white.opacity(0.08))
         )
-        .overlay(alignment: .topLeading) {
-            circleButton("xmark", action: onClose).padding(14)
-        }
+        .overlay(alignment: .topLeading) { circleButton("xmark", action: onClose).padding(14) }
         .overlay(alignment: .topTrailing) {
-            circleButton(expanded ? "arrow.down.forward.and.arrow.up.backward" : "arrow.up.backward.and.arrow.down.forward") {
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { expanded.toggle() }
-            }
-            .padding(14)
+            circleButton("doc.on.doc", action: copyLastAnswer).padding(14)
         }
         .shadow(color: .black.opacity(0.45), radius: 30, y: 12)
         .onAppear {
             withAnimation(.spring(response: 0.55, dampingFraction: 0.6)) { glow = true }
+            if turns.last?.user == true { Task { await runPending() } }
         }
     }
 
+    private let bottomID = "snap-bottom"
+
     // MARK: - Pieces
 
-    private var thumbnail: some View {
-        HStack {
-            Spacer(minLength: 0)
-            Image(nsImage: image)
-                .resizable()
-                .scaledToFit()
-                .frame(maxWidth: 190, maxHeight: 190)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .strokeBorder(Palette.accentB.opacity(glow ? 0.55 : 0), lineWidth: 1.5)
-                )
-                .shadow(color: Palette.accentB.opacity(glow ? 0.5 : 0), radius: glow ? 20 : 0)
-                .scaleEffect(glow ? 1 : 0.9)
-                .opacity(glow ? 1 : 0)
+    @ViewBuilder private var thumbnail: some View {
+        if let image {
+            HStack {
+                Spacer(minLength: 0)
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: 200, maxHeight: 200)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .strokeBorder(Palette.accentB.opacity(glow ? 0.55 : 0), lineWidth: 1.5)
+                    )
+                    .shadow(color: Palette.accentB.opacity(glow ? 0.5 : 0), radius: glow ? 20 : 0)
+                    .scaleEffect(glow ? 1 : 0.9)
+                    .opacity(glow ? 1 : 0)
+            }
         }
     }
 
     private func questionBubble(_ text: String) -> some View {
         Text(text)
             .font(.callout)
-            .foregroundStyle(.primary)
+            .foregroundStyle(.white)
             .textSelection(.enabled)
-            .padding(.horizontal, 12).padding(.vertical, 8)
+            .padding(.horizontal, 13).padding(.vertical, 9)
             .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color.white.opacity(0.12))
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Palette.gradient)
             )
     }
 
@@ -154,12 +169,12 @@ private struct SnapChatView: View {
         }
     }
 
-    private var inputPill: some View {
+    private var inputBar: some View {
         HStack(spacing: 10) {
             Image(systemName: "sparkles")
                 .font(.system(size: 13))
                 .foregroundStyle(Palette.accentB)
-            TextField("Ask about the screenshot…", text: $input, axis: .vertical)
+            TextField("Follow up…", text: $input, axis: .vertical)
                 .textFieldStyle(.plain)
                 .lineLimit(1...4)
                 .onSubmit(submit)
@@ -176,9 +191,7 @@ private struct SnapChatView: View {
             }
         }
         .padding(.horizontal, 14).padding(.vertical, 10)
-        .background(
-            Capsule().fill(Color.white.opacity(0.10))
-        )
+        .background(Capsule().fill(Color.white.opacity(0.10)))
         .overlay(Capsule().strokeBorder(Color.white.opacity(0.12)))
         .padding(14)
     }
@@ -198,31 +211,37 @@ private struct SnapChatView: View {
         !input.trimmingCharacters(in: .whitespaces).isEmpty && !sending
     }
 
-    // MARK: - Send
+    // MARK: - Logic
 
     private func submit() {
         let question = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !question.isEmpty, !sending else { return }
-        messages.append(Msg(user: true, text: question))
+        turns.append(SnapTurn(user: true, text: question))
         input = ""
-        sending = true
-        let context = buildContext()
-        Task {
-            let result = await send(context)
-            sending = false
-            switch result {
-            case .answer(let answer): messages.append(Msg(user: false, text: answer))
-            case .failure(let error): messages.append(Msg(user: false, text: "⚠︎ \(error)"))
-            }
-        }
+        persist(turns)
+        Task { await runPending() }
     }
 
-    private func buildContext() -> String {
-        var transcript = ""
-        for m in messages {
-            transcript += (m.user ? "User: " : "Assistant: ") + m.text + "\n"
+    private func runPending() async {
+        guard turns.last?.user == true, !sending else { return }
+        sending = true
+        let reply = await send(turns)
+        sending = false
+        switch reply {
+        case .answer(let answer): turns.append(SnapTurn(user: false, text: answer))
+        case .failure(let error): turns.append(SnapTurn(user: false, text: "⚠︎ \(error)"))
         }
-        transcript += "Answer the last user question about the attached screenshot."
-        return transcript
+        persist(turns)
+    }
+
+    private func copyLastAnswer() {
+        guard let last = turns.last(where: { !$0.user })?.text else { return }
+        Clipboard.writeString(last)
+    }
+
+    private func scrollToBottom(_ proxy: ScrollViewProxy) {
+        withAnimation(.easeOut(duration: 0.25)) {
+            proxy.scrollTo(bottomID, anchor: .bottom)
+        }
     }
 }

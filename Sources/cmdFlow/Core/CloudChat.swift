@@ -54,15 +54,44 @@ enum CloudChat {
             userContent = input
         }
 
-        let body: [String: Any] = [
-            "model": model,
-            "messages": [
-                ["role": "system", "content": instructions],
-                ["role": "user", "content": userContent]
-            ]
+        let messages: [[String: Any]] = [
+            ["role": "system", "content": instructions],
+            ["role": "user", "content": userContent]
         ]
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        return try await send(request: request, model: model, messages: messages,
+                              providerName: providerName)
+    }
 
+    /// Multi-turn variant: caller supplies the already-serialized request body
+    /// (`{"model": …, "messages": […]}`) as `Data`, which is Sendable.
+    static func postJSON(
+        endpoint: URL,
+        providerName: String,
+        apiKey: String,
+        bodyData: Data,
+        extraHeaders: [String: String] = [:]
+    ) async throws -> String {
+        let key = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !key.isEmpty else {
+            throw ServiceError(message: "No \(providerName) API key. Paste one in Settings.")
+        }
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        for (name, value) in extraHeaders { request.setValue(value, forHTTPHeaderField: name) }
+        request.httpBody = bodyData
+        return try await perform(request, providerName: providerName)
+    }
+
+    private static func send(request: URLRequest, model: String,
+                             messages: [[String: Any]], providerName: String) async throws -> String {
+        var request = request
+        request.httpBody = try JSONSerialization.data(withJSONObject: ["model": model, "messages": messages])
+        return try await perform(request, providerName: providerName)
+    }
+
+    private static func perform(_ request: URLRequest, providerName: String) async throws -> String {
         let (data, response) = try await URLSession.shared.data(for: request)
         try ensureOK(response, data, providerName: providerName)
 
