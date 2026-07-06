@@ -215,10 +215,13 @@ private struct SnapChatView: View {
     }
 
     private var thinking: some View {
-        Text("Thinking…")
-            .font(.callout)
-            .foregroundStyle(.secondary)
-            .shimmer()
+        HStack(spacing: 9) {
+            ThinkingSquare()
+            Text("Thinking…")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .shimmer()
+        }
     }
 
     private var inputBar: some View {
@@ -301,5 +304,30 @@ private struct SnapChatView: View {
         withAnimation(.easeOut(duration: 0.25)) {
             proxy.scrollTo(bottomID, anchor: .bottom)
         }
+    }
+}
+
+/// Small gradient square that spins (linear) and gently breathes (ease-in-out) —
+/// a calm "thinking" mark. Only transform/opacity animate; respects reduce-motion.
+private struct ThinkingSquare: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var spin = false
+    @State private var breathe = false
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 4, style: .continuous)
+            .fill(Palette.gradient)
+            .frame(width: 13, height: 13)
+            .rotationEffect(.degrees(spin ? 360 : 0))
+            .scaleEffect(breathe ? 1.0 : 0.82)
+            .opacity(breathe ? 1.0 : 0.6)
+            .onAppear {
+                if reduceMotion {
+                    withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) { breathe = true }
+                } else {
+                    withAnimation(.linear(duration: 1.1).repeatForever(autoreverses: false)) { spin = true }
+                    withAnimation(.easeInOut(duration: 0.85).repeatForever(autoreverses: true)) { breathe = true }
+                }
+            }
     }
 }
