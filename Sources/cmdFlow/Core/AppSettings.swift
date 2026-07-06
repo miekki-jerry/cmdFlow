@@ -64,6 +64,8 @@ struct AppSettings: Codable, Equatable {
     var openRouterVisionModel: String = "openai/gpt-5.4"
     var openAIVisionModel: String = "gpt-5.4"
     var screenshotSystemPrompt: String = AppSettings.defaultScreenshotSystemPrompt
+    /// Let OpenRouter cloud models browse the web (server-side web_search tool).
+    var webSearch: Bool = true
 
     static let defaultScreenshotSystemPrompt =
         "You are a helpful assistant. Answer the user's questions about the attached screenshot. Be concise and specific, and use the same language as the question."
@@ -74,7 +76,7 @@ struct AppSettings: Codable, Equatable {
         case providerMode, cloudProvider, openRouterModel, openAIModel
         case screenshotChatEnabled, screenshotKeyCode, screenshotModifiers
         case screenshotProvider, openRouterVisionModel, openAIVisionModel
-        case screenshotSystemPrompt
+        case screenshotSystemPrompt, webSearch
     }
 }
 
@@ -115,5 +117,6 @@ extension AppSettings {
         openAIVisionModel = ((try? c.decodeIfPresent(String.self, forKey: .openAIVisionModel)) ?? nil) ?? "gpt-5.4"
         let sysPrompt = ((try? c.decodeIfPresent(String.self, forKey: .screenshotSystemPrompt)) ?? nil) ?? ""
         screenshotSystemPrompt = sysPrompt.isEmpty ? AppSettings.defaultScreenshotSystemPrompt : sysPrompt
+        webSearch = ((try? c.decodeIfPresent(Bool.self, forKey: .webSearch)) ?? nil) ?? true
     }
 }

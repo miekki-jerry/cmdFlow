@@ -269,10 +269,37 @@ private struct GeneralTab: View {
         ScrollView {
             VStack(spacing: 14) {
                 KeysCard()
+                WebSearchCard()
                 LaunchAtLoginCard()
             }
             .padding(18)
         }
+    }
+}
+
+private struct WebSearchCard: View {
+    @EnvironmentObject var app: AppState
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "globe")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Palette.accentB)
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Web search")
+                    .font(.system(.body, weight: .medium))
+                Text("Let OpenRouter models browse the web for current info (text actions and screenshot chat). Not available for the OpenAI provider.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
+            Toggle("", isOn: $app.settings.webSearch)
+                .labelsHidden()
+                .toggleStyle(.switch)
+        }
+        .card()
     }
 }
 

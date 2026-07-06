@@ -9,11 +9,12 @@ enum OpenRouterService {
         "X-Title": "cmdFlow"
     ]
 
-    static func transform(apiKey: String, model: String, instructions: String, input: String) async throws -> String {
+    static func transform(apiKey: String, model: String, instructions: String, input: String,
+                          webSearch: Bool = false) async throws -> String {
         try await CloudChat.complete(
             endpoint: endpoint, providerName: "OpenRouter",
             apiKey: apiKey, model: model, instructions: instructions, input: input,
-            extraHeaders: headers
+            openRouterWebSearch: webSearch, extraHeaders: headers
         )
     }
 

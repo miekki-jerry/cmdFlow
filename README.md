@@ -55,6 +55,7 @@ Cloud provider: **OpenRouter** (300+ models, built-in search) or **OpenAI** (`gp
 - 🎹 **Global shortcuts** — Carbon `RegisterEventHotKey`, no Accessibility permission.
 - ⚙️ **Multiple actions** — each with its own shortcut and prompt, persisted locally.
 - 📸 **Screenshot chat (vision)** — a shortcut drops a region selector; the background dims with your selection lit in place, a focused prompt pill takes your question, then a floating multi-turn chat **streams** the answer. History in the Chats tab, editable system prompt. Cloud-only (OpenRouter/OpenAI) — Apple's on-device model is text-only.
+- 🌐 **Web search** — OpenRouter cloud models browse the web for current info (default on; toggle in General). Applies to text actions and the screenshot chat.
 - 🔒 **On-device by default** — your text never leaves the Mac until you pick a cloud provider.
 - ☁️ **OpenRouter + OpenAI** — your own key (in the Keychain), with a live model search for both.
 - 🎬 **Animated shortcut recorder** — radar pulse, keycaps, and a warning on system collisions.

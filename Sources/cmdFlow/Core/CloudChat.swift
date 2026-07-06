@@ -26,6 +26,7 @@ enum CloudChat {
         instructions: String,
         input: String,
         imageBase64PNG: String? = nil,
+        openRouterWebSearch: Bool = false,
         extraHeaders: [String: String] = [:]
     ) async throws -> String {
         let key = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -58,8 +59,14 @@ enum CloudChat {
             ["role": "system", "content": instructions],
             ["role": "user", "content": userContent]
         ]
+        let extraBody: [String: Any] = openRouterWebSearch ? ["tools": [Self.webSearchTool]] : [:]
         return try await send(request: request, model: model, messages: messages,
-                              providerName: providerName)
+                              extraBody: extraBody, providerName: providerName)
+    }
+
+    /// OpenRouter server-side web search tool.
+    static var webSearchTool: [String: Any] {
+        ["type": "openrouter:web_search", "parameters": ["max_results": 5]]
     }
 
     /// Multi-turn variant: caller supplies the already-serialized request body
@@ -85,9 +92,12 @@ enum CloudChat {
     }
 
     private static func send(request: URLRequest, model: String,
-                             messages: [[String: Any]], providerName: String) async throws -> String {
+                             messages: [[String: Any]], extraBody: [String: Any] = [:],
+                             providerName: String) async throws -> String {
+        var body: [String: Any] = ["model": model, "messages": messages]
+        for (key, value) in extraBody { body[key] = value }
         var request = request
-        request.httpBody = try JSONSerialization.data(withJSONObject: ["model": model, "messages": messages])
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
         return try await perform(request, providerName: providerName)
     }
 
