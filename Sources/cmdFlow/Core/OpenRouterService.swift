@@ -3,18 +3,25 @@ import Foundation
 /// OpenRouter client: chat completions (via CloudChat) + model listing.
 enum OpenRouterService {
 
+    private static let endpoint = URL(string: "https://openrouter.ai/api/v1/chat/completions")!
+    private static let headers = [
+        "HTTP-Referer": "https://github.com/miekki-jerry/cmdFlow",
+        "X-Title": "cmdFlow"
+    ]
+
     static func transform(apiKey: String, model: String, instructions: String, input: String) async throws -> String {
         try await CloudChat.complete(
-            endpoint: URL(string: "https://openrouter.ai/api/v1/chat/completions")!,
-            providerName: "OpenRouter",
-            apiKey: apiKey,
-            model: model,
-            instructions: instructions,
-            input: input,
-            extraHeaders: [
-                "HTTP-Referer": "https://github.com/miekki-jerry/cmdFlow",
-                "X-Title": "cmdFlow"
-            ]
+            endpoint: endpoint, providerName: "OpenRouter",
+            apiKey: apiKey, model: model, instructions: instructions, input: input,
+            extraHeaders: headers
+        )
+    }
+
+    static func transformVision(apiKey: String, model: String, instructions: String, input: String, imageBase64PNG: String) async throws -> String {
+        try await CloudChat.complete(
+            endpoint: endpoint, providerName: "OpenRouter",
+            apiKey: apiKey, model: model, instructions: instructions, input: input,
+            imageBase64PNG: imageBase64PNG, extraHeaders: headers
         )
     }
 

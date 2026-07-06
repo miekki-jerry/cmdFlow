@@ -10,6 +10,7 @@ struct SettingsView: View {
                 VStack(spacing: 14) {
                     GeneralCard()
                     ProviderCard()
+                    ScreenshotCard()
                     actionsSection
                 }
                 .padding(18)
@@ -209,7 +210,7 @@ private struct ProviderCard: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            if app.settings.providerMode.usesCloud {
+            if app.settings.providerMode.usesCloud || app.settings.screenshotChatEnabled {
                 Divider().padding(.vertical, 2)
                 cloudProviderPicker
                 keyField
@@ -291,6 +292,70 @@ private struct ProviderCard: View {
             return "Apple on-device first; if it refuses (e.g. language), automatic fallback to the selected cloud provider."
         case .cloud:
             return "Every request goes to the selected provider on your key. Any language, cost per the model's pricing."
+        }
+    }
+}
+
+// MARK: - Screenshot chat card
+
+private struct ScreenshotCard: View {
+    @EnvironmentObject var app: AppState
+    @State private var showVisionPicker = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles.rectangle.stack")
+                    .foregroundStyle(Palette.accentB)
+                Text("Screenshot chat")
+                    .font(.system(.body, weight: .semibold))
+                Spacer()
+                Toggle("", isOn: $app.settings.screenshotChatEnabled)
+                    .labelsHidden().toggleStyle(.switch)
+            }
+            Text("Press a shortcut, drag to select a screen region, then ask a vision model about it. Uses the cloud provider — Apple's on-device model can't read images.")
+                .font(.caption2).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if app.settings.screenshotChatEnabled {
+                VStack(alignment: .leading, spacing: 5) {
+                    SectionLabel("Shortcut")
+                    ShortcutRecorder(keyCode: $app.settings.screenshotKeyCode, modifiers: $app.settings.screenshotModifiers)
+                }
+                visionModelField
+            }
+        }
+        .card()
+        .sheet(isPresented: $showVisionPicker) {
+            ModelPickerSheet(selected: $app.settings.openRouterVisionModel)
+        }
+    }
+
+    @ViewBuilder private var visionModelField: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            SectionLabel("Vision model · \(app.settings.cloudProvider.label)")
+            if app.settings.cloudProvider == .openRouter {
+                HStack(spacing: 8) {
+                    TextField("e.g. openai/gpt-4o", text: $app.settings.openRouterVisionModel)
+                        .textFieldStyle(.roundedBorder).font(.system(.body, design: .monospaced))
+                    Button { showVisionPicker = true } label: {
+                        Label("Search", systemImage: "magnifyingglass")
+                    }
+                }
+            } else {
+                HStack(spacing: 8) {
+                    TextField("e.g. gpt-4o", text: $app.settings.openAIVisionModel)
+                        .textFieldStyle(.roundedBorder).font(.system(.body, design: .monospaced))
+                    Menu {
+                        ForEach(OpenAIService.suggestedVisionModels, id: \.self) { model in
+                            Button(model) { app.settings.openAIVisionModel = model }
+                        }
+                    } label: {
+                        Label("Models", systemImage: "list.bullet")
+                    }
+                    .menuStyle(.borderlessButton).fixedSize()
+                }
+            }
         }
     }
 }

@@ -54,6 +54,7 @@ Cloud provider: **OpenRouter** (300+ models, built-in search) or **OpenAI** (`gp
 
 - 🎹 **Global shortcuts** — Carbon `RegisterEventHotKey`, no Accessibility permission.
 - ⚙️ **Multiple actions** — each with its own shortcut and prompt, persisted locally.
+- 📸 **Screenshot chat (vision)** — a shortcut drops a CleanShot-style region selector; the capture glows into a floating chat where you ask a vision model about it. Cloud-only (OpenRouter/OpenAI) — Apple's on-device model is text-only.
 - 🔒 **On-device by default** — your text never leaves the Mac until you pick a cloud provider.
 - ☁️ **OpenRouter + OpenAI** — your own key (in the Keychain), plus an OpenRouter model search.
 - 🎬 **Animated shortcut recorder** — radar pulse, keycaps, and a warning on system collisions.
@@ -101,6 +102,8 @@ Requires Xcode 26+ / Swift 6.2+. The app is an SPM package assembled into a `.ap
 | `LaunchAtLogin` | Launch at login via `SMAppService` |
 | `AppState` | Persists actions/settings, routes providers, registers shortcuts |
 | `ShortcutRecorder` / `DesignKit` | Animated recorder and shared visual language |
+| `RegionSelector` / `ScreenCapture` | Region selector overlay + ScreenCaptureKit capture |
+| `SnapChat` | Floating vision-chat panel with glow-in animation |
 
 ## Author
 

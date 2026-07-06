@@ -17,7 +17,7 @@ final class AppState: ObservableObject {
         didSet { persist(); reregisterHotKeys() }
     }
     @Published var settings: AppSettings {
-        didSet { persistSettings() }
+        didSet { persistSettings(); reregisterHotKeys() }
     }
     /// API keys — stored in Keychain; these are just UI mirrors.
     /// Loaded lazily (when Settings opens) so the Keychain prompt doesn't block launch.
@@ -34,6 +34,8 @@ final class AppState: ObservableObject {
     @Published private(set) var launchAtLogin: Bool = false
 
     private let hotKeys = HotKeyManager()
+    private let regionSelector = RegionSelector()
+    private let snapChat = SnapChatController()
     private let defaultsKey = "cmdflow.actions.v1"
     private let settingsKey = "cmdflow.settings.v1"
     private var resetTask: Task<Void, Never>?
@@ -102,6 +104,68 @@ final class AppState: ObservableObject {
             hotKeys.register(keyCode: keyCode, modifiers: action.modifiers) { [weak self] in
                 self?.trigger(actionID: id)
             }
+        }
+        if settings.screenshotChatEnabled,
+           let keyCode = settings.screenshotKeyCode, settings.screenshotModifiers != 0 {
+            hotKeys.register(keyCode: keyCode, modifiers: settings.screenshotModifiers) { [weak self] in
+                self?.startScreenshotChat()
+            }
+        }
+    }
+
+    // MARK: - Screenshot chat (vision)
+
+    func startScreenshotChat() {
+        regionSelector.begin { [weak self] rect, screen in
+            guard let self, let rect, let screen else { return }
+            Task { await self.captureAndPresent(rect: rect, screen: screen) }
+        }
+    }
+
+    private func captureAndPresent(rect: CGRect, screen: NSScreen) async {
+        guard let displayID = screen.displayID else {
+            setActivity(.failure("Couldn't find the display")); return
+        }
+        let frame = screen.frame
+        let scale = screen.backingScaleFactor
+        do {
+            let image = try await ScreenCapture.capture(
+                globalRect: rect, displayID: displayID, screenFrame: frame, scale: scale)
+            guard let base64 = ScreenCapture.pngBase64(image) else {
+                setActivity(.failure("Couldn't encode the screenshot")); return
+            }
+            playSound("Glass")
+            snapChat.present(image: image) { [weak self] question in
+                guard let self else { return SnapReply.failure("cmdFlow is unavailable") }
+                return await self.askVision(question: question, imageBase64: base64)
+            }
+        } catch {
+            setActivity(.failure(error.localizedDescription))
+            NSSound.beep()
+        }
+    }
+
+    private func askVision(question: String, imageBase64: String) async -> SnapReply {
+        let instructions = "You are a helpful assistant answering questions about the attached screenshot. Be concise and specific."
+        do {
+            let answer: String
+            switch settings.cloudProvider {
+            case .openRouter:
+                answer = try await OpenRouterService.transformVision(
+                    apiKey: Keychain.get(account: Keychain.openRouterAccount),
+                    model: settings.openRouterVisionModel,
+                    instructions: instructions, input: question, imageBase64PNG: imageBase64
+                )
+            case .openAI:
+                answer = try await OpenAIService.transformVision(
+                    apiKey: Keychain.get(account: Keychain.openAIAccount),
+                    model: settings.openAIVisionModel,
+                    instructions: instructions, input: question, imageBase64PNG: imageBase64
+                )
+            }
+            return .answer(answer)
+        } catch {
+            return .failure(error.localizedDescription)
         }
     }
 

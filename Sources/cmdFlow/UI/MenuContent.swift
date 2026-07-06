@@ -19,6 +19,13 @@ struct MenuContent: View {
                 }
             }
 
+            if app.settings.screenshotChatEnabled {
+                Divider()
+                Button("Ask a screenshot") {
+                    app.startScreenshotChat()
+                }
+            }
+
             Divider()
             Button("Settings…") {
                 NotificationCenter.default.post(name: .openCmdFlowSettings, object: nil)

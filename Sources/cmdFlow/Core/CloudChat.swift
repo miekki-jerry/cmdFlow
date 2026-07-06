@@ -16,6 +16,8 @@ enum CloudChat {
         let choices: [Choice]
     }
 
+    /// - Parameter imageBase64PNG: optional base64 PNG for vision (attached as an `image_url`
+    ///   data URL). Both OpenAI and OpenRouter accept this via chat/completions.
     static func complete(
         endpoint: URL,
         providerName: String,
@@ -23,6 +25,7 @@ enum CloudChat {
         model: String,
         instructions: String,
         input: String,
+        imageBase64PNG: String? = nil,
         extraHeaders: [String: String] = [:]
     ) async throws -> String {
         let key = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -41,11 +44,21 @@ enum CloudChat {
             request.setValue(value, forHTTPHeaderField: name)
         }
 
+        let userContent: Any
+        if let image = imageBase64PNG {
+            userContent = [
+                ["type": "text", "text": input],
+                ["type": "image_url", "image_url": ["url": "data:image/png;base64,\(image)"]]
+            ]
+        } else {
+            userContent = input
+        }
+
         let body: [String: Any] = [
             "model": model,
             "messages": [
                 ["role": "system", "content": instructions],
-                ["role": "user", "content": input]
+                ["role": "user", "content": userContent]
             ]
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
