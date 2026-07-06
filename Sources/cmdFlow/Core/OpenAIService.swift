@@ -4,10 +4,12 @@ import Foundation
 enum OpenAIService {
     private static let endpoint = URL(string: "https://api.openai.com/v1/chat/completions")!
 
-    static func transform(apiKey: String, model: String, instructions: String, input: String) async throws -> String {
+    static func transform(apiKey: String, model: String, instructions: String, input: String,
+                          webSearch: Bool = false) async throws -> String {
         try await CloudChat.complete(
             endpoint: endpoint, providerName: "OpenAI",
-            apiKey: apiKey, model: model, instructions: instructions, input: input
+            apiKey: apiKey, model: model, instructions: instructions, input: input,
+            openAIWebSearch: webSearch
         )
     }
 

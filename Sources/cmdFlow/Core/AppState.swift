@@ -205,8 +205,12 @@ final class AppState: ObservableObject {
                                      systemPrompt: settings.screenshotSystemPrompt)
         // Serialize on the main actor so only Sendable values cross into the task.
         var body: [String: Any] = ["model": model, "messages": messages, "stream": true]
-        if provider == .openRouter && settings.webSearch {
-            body["tools"] = [CloudChat.webSearchTool]
+        if settings.webSearch {
+            if provider == .openRouter {
+                body["tools"] = [CloudChat.webSearchTool]
+            } else {
+                body["web_search_options"] = [String: Any]()
+            }
         }
         let bodyData = model.trimmingCharacters(in: .whitespaces).isEmpty ? nil :
             try? JSONSerialization.data(withJSONObject: body)
@@ -312,7 +316,8 @@ final class AppState: ObservableObject {
             let key = keysLoaded ? openAIKey : Keychain.get(account: Keychain.openAIAccount)
             return try await OpenAIService.transform(
                 apiKey: key, model: settings.openAIModel,
-                instructions: instructions, input: input
+                instructions: instructions, input: input,
+                webSearch: settings.webSearch
             )
         }
     }

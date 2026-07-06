@@ -83,6 +83,7 @@ private struct SnapChatView: View {
     @State private var glow = false
     @State private var atBottom = true
     @State private var expanded = false
+    @FocusState private var inputFocused: Bool
 
     private let bottomID = "snap-bottom"
 
@@ -148,8 +149,8 @@ private struct SnapChatView: View {
             }
             inputBar
         }
-        .frame(width: expanded ? 660 : 480)
-        .frame(minHeight: 380, maxHeight: expanded ? 920 : 760)
+        .frame(width: expanded ? 720 : 480)
+        .frame(minHeight: expanded ? 760 : 380, maxHeight: expanded ? 940 : 760)
         .animation(.spring(response: 0.4, dampingFraction: 0.82), value: expanded)
         .background(.regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
@@ -167,6 +168,7 @@ private struct SnapChatView: View {
         .shadow(color: .black.opacity(0.45), radius: 30, y: 12)
         .onAppear {
             withAnimation(.spring(response: 0.55, dampingFraction: 0.6)) { glow = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { inputFocused = true }
             if turns.last?.user == true { Task { await runPending() } }
         }
     }
@@ -221,9 +223,10 @@ private struct SnapChatView: View {
 
     private var inputBar: some View {
         HStack(spacing: 10) {
-            TextField("Follow up…", text: $input, axis: .vertical)
+            TextField("Ask a follow-up…", text: $input, axis: .vertical)
                 .textFieldStyle(.plain)
                 .lineLimit(1...4)
+                .focused($inputFocused)
                 .onSubmit(submit)
             if sending {
                 ProgressView().controlSize(.small)

@@ -27,6 +27,7 @@ enum CloudChat {
         input: String,
         imageBase64PNG: String? = nil,
         openRouterWebSearch: Bool = false,
+        openAIWebSearch: Bool = false,
         extraHeaders: [String: String] = [:]
     ) async throws -> String {
         let key = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -59,7 +60,9 @@ enum CloudChat {
             ["role": "system", "content": instructions],
             ["role": "user", "content": userContent]
         ]
-        let extraBody: [String: Any] = openRouterWebSearch ? ["tools": [Self.webSearchTool]] : [:]
+        var extraBody: [String: Any] = [:]
+        if openRouterWebSearch { extraBody["tools"] = [Self.webSearchTool] }
+        if openAIWebSearch { extraBody["web_search_options"] = [String: Any]() }
         return try await send(request: request, model: model, messages: messages,
                               extraBody: extraBody, providerName: providerName)
     }

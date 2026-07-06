@@ -289,7 +289,7 @@ private struct WebSearchCard: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text("Web search")
                     .font(.system(.body, weight: .medium))
-                Text("Let OpenRouter models browse the web for current info (text actions and screenshot chat). Not available for the OpenAI provider.")
+                Text("Let cloud models browse the web for current info (text actions and screenshot chat). OpenRouter works with any model; OpenAI needs a web-search model (e.g. gpt-5-search-api).")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
