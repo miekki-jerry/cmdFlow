@@ -24,6 +24,13 @@ enum OpenRouterService {
         )
     }
 
+    static func stream(apiKey: String, bodyData: Data, onDelta: @Sendable (String) -> Void) async throws {
+        try await CloudChat.streamJSON(
+            endpoint: endpoint, providerName: "OpenRouter",
+            apiKey: apiKey, bodyData: bodyData, extraHeaders: headers, onDelta: onDelta
+        )
+    }
+
     // MARK: - Models (for the search picker)
 
     struct Model: Decodable, Identifiable, Equatable {

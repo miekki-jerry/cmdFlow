@@ -91,6 +91,52 @@ enum CloudChat {
         return try await perform(request, providerName: providerName)
     }
 
+    /// Streams a chat completion (SSE). `bodyData` must include `"stream": true`.
+    /// Calls `onDelta` with each content chunk as it arrives.
+    static func streamJSON(
+        endpoint: URL,
+        providerName: String,
+        apiKey: String,
+        bodyData: Data,
+        extraHeaders: [String: String] = [:],
+        onDelta: @Sendable (String) -> Void
+    ) async throws {
+        let key = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !key.isEmpty else {
+            throw ServiceError(message: "No \(providerName) API key. Paste one in Settings.")
+        }
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+        for (name, value) in extraHeaders { request.setValue(value, forHTTPHeaderField: name) }
+        request.httpBody = bodyData
+
+        let (bytes, response) = try await URLSession.shared.bytes(for: request)
+        if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+            switch http.statusCode {
+            case 401: throw ServiceError(message: "Invalid \(providerName) API key (401).")
+            case 402: throw ServiceError(message: "No credit on your \(providerName) account (402).")
+            case 429: throw ServiceError(message: "\(providerName) rate limit exceeded (429).")
+            default: throw ServiceError(message: "\(providerName): HTTP error \(http.statusCode).")
+            }
+        }
+
+        for try await line in bytes.lines {
+            guard line.hasPrefix("data:") else { continue }
+            let payload = line.dropFirst(5).trimmingCharacters(in: .whitespaces)
+            if payload == "[DONE]" { break }
+            guard let data = payload.data(using: .utf8),
+                  let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let choices = obj["choices"] as? [[String: Any]],
+                  let delta = choices.first?["delta"] as? [String: Any],
+                  let content = delta["content"] as? String
+            else { continue }
+            onDelta(content)
+        }
+    }
+
     private static func perform(_ request: URLRequest, providerName: String) async throws -> String {
         let (data, response) = try await URLSession.shared.data(for: request)
         try ensureOK(response, data, providerName: providerName)

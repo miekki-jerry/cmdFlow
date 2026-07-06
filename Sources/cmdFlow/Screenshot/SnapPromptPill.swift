@@ -25,7 +25,7 @@ final class SnapPromptPill {
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = false
-        panel.level = .floating
+        panel.level = .popUpMenu
         panel.isFloatingPanel = true
         panel.hidesOnDeactivate = false
         panel.appearance = NSAppearance(named: .darkAqua)
@@ -47,7 +47,7 @@ final class SnapPromptPill {
         PanelFade.present(panel)
     }
 
-    private func close() {
+    func close() {
         guard let panel else { return }
         self.panel = nil
         PanelFade.dismiss(panel)
@@ -63,8 +63,6 @@ private struct PillView: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: "sparkles")
-                .foregroundStyle(Palette.gradient)
             TextField("Ask about the selection…", text: $text)
                 .textFieldStyle(.plain)
                 .font(.system(size: 14))

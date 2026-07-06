@@ -18,6 +18,13 @@ enum OpenAIService {
         )
     }
 
+    static func stream(apiKey: String, bodyData: Data, onDelta: @Sendable (String) -> Void) async throws {
+        try await CloudChat.streamJSON(
+            endpoint: endpoint, providerName: "OpenAI",
+            apiKey: apiKey, bodyData: bodyData, onDelta: onDelta
+        )
+    }
+
     // MARK: - Model listing (GET /v1/models, requires the key)
 
     private struct Model: Decodable { let id: String; let created: Int? }

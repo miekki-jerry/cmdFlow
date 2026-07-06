@@ -39,6 +39,7 @@ final class AppState: ObservableObject {
     private let regionSelector = RegionSelector()
     private let snapChat = SnapChatController()
     private let promptPill = SnapPromptPill()
+    private let backdrop = SnapBackdrop()
     private let defaultsKey = "cmdflow.actions.v1"
     private let settingsKey = "cmdflow.settings.v1"
     private var resetTask: Task<Void, Never>?
@@ -125,9 +126,10 @@ final class AppState: ObservableObject {
         }
     }
 
-    /// Reopens a saved session from the Chats tab.
+    /// Reopens a saved session from the Chats tab (no capture backdrop).
     func reopenSession(_ session: SnapSession) {
-        openPanel(session: session, image: ScreenCapture.image(fromBase64PNG: session.imageBase64))
+        openPanel(session: session, image: ScreenCapture.image(fromBase64PNG: session.imageBase64),
+                  onClose: { [weak self] in self?.snapChat.close() })
     }
 
     private func captureAndPromptPill(rect: CGRect, screen: NSScreen) async {
@@ -143,68 +145,86 @@ final class AppState: ObservableObject {
                 setActivity(.failure("Couldn't encode the screenshot")); return
             }
             playSound("Glass")
+            backdrop.present(image: image, selectionRect: rect, screen: screen,
+                             onDismiss: { [weak self] in self?.dismissScreenshotUI() })
             promptPill.present(near: rect, onSubmit: { [weak self] question in
                 self?.beginSession(imageBase64: base64, image: image, firstQuestion: question)
-            }, onCancel: {})
+            }, onCancel: { [weak self] in self?.dismissScreenshotUI() })
         } catch {
             setActivity(.failure(error.localizedDescription))
             NSSound.beep()
         }
     }
 
+    private func dismissScreenshotUI() {
+        promptPill.close()
+        snapChat.close()
+        backdrop.dismiss()
+    }
+
     private func beginSession(imageBase64: String, image: NSImage, firstQuestion: String) {
+        promptPill.close() // keep the backdrop; hand over to the chat panel
         let session = SnapSession(createdAt: Date(), imageBase64: imageBase64,
                                   turns: [SnapTurn(user: true, text: firstQuestion)])
         history.upsert(session)
-        openPanel(session: session, image: image)
+        openPanel(session: session, image: image,
+                  onClose: { [weak self] in self?.dismissScreenshotUI() })
     }
 
-    private func openPanel(session: SnapSession, image: NSImage?) {
+    private func openPanel(session: SnapSession, image: NSImage?, onClose: @escaping () -> Void) {
         let sessionID = session.id
         let createdAt = session.createdAt
         let base64 = session.imageBase64
         snapChat.present(
             image: image,
             initialTurns: session.turns,
-            send: { [weak self] turns in
-                guard let self else { return SnapReply.failure("cmdFlow is unavailable") }
-                return await self.answer(for: turns, imageBase64: base64)
+            stream: { [weak self] turns in
+                guard let self else { return AppState.emptyStream() }
+                return self.answerStream(for: turns, imageBase64: base64)
             },
             persist: { [weak self] turns in
                 self?.history.upsert(SnapSession(id: sessionID, createdAt: createdAt,
                                                  imageBase64: base64, turns: turns))
-            }
+            },
+            onClose: onClose
         )
     }
 
-    private func answer(for turns: [SnapTurn], imageBase64: String) async -> SnapReply {
+    private static func emptyStream() -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { $0.finish() }
+    }
+
+    /// Streams a vision answer for the given turns as content deltas.
+    private func answerStream(for turns: [SnapTurn], imageBase64: String) -> AsyncThrowingStream<String, Error> {
         let provider = settings.screenshotProvider
         let model = provider == .openRouter ? settings.openRouterVisionModel : settings.openAIVisionModel
-        guard !model.trimmingCharacters(in: .whitespaces).isEmpty else {
-            return .failure("No vision model selected.")
-        }
+        let orKey = Keychain.get(account: Keychain.openRouterAccount)
+        let oaKey = Keychain.get(account: Keychain.openAIAccount)
         let messages = buildMessages(turns: turns, imageBase64: imageBase64,
                                      systemPrompt: settings.screenshotSystemPrompt)
-        // Serialize on the main actor so only Sendable `Data` crosses isolation.
-        let bodyData: Data
-        do {
-            bodyData = try JSONSerialization.data(withJSONObject: ["model": model, "messages": messages])
-        } catch {
-            return .failure("Couldn't build the request.")
-        }
-        do {
-            let content: String
-            switch provider {
-            case .openRouter:
-                content = try await OpenRouterService.chat(
-                    apiKey: Keychain.get(account: Keychain.openRouterAccount), bodyData: bodyData)
-            case .openAI:
-                content = try await OpenAIService.chat(
-                    apiKey: Keychain.get(account: Keychain.openAIAccount), bodyData: bodyData)
+        // Serialize on the main actor so only Sendable values cross into the task.
+        let bodyData = model.trimmingCharacters(in: .whitespaces).isEmpty ? nil :
+            try? JSONSerialization.data(withJSONObject: ["model": model, "messages": messages, "stream": true])
+
+        return AsyncThrowingStream { continuation in
+            let task = Task {
+                guard let bodyData else {
+                    continuation.finish(throwing: RunError(message: "No vision model selected."))
+                    return
+                }
+                do {
+                    switch provider {
+                    case .openRouter:
+                        try await OpenRouterService.stream(apiKey: orKey, bodyData: bodyData) { continuation.yield($0) }
+                    case .openAI:
+                        try await OpenAIService.stream(apiKey: oaKey, bodyData: bodyData) { continuation.yield($0) }
+                    }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
             }
-            return .answer(content)
-        } catch {
-            return .failure(error.localizedDescription)
+            continuation.onTermination = { _ in task.cancel() }
         }
     }
 
