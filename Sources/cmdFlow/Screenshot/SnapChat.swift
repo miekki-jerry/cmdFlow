@@ -7,9 +7,34 @@ enum SnapReply {
 }
 
 /// Borderless floating panel that can still become key (for text input).
+/// `onCancel` fires on Escape (cancelOperation).
 final class FloatingPanel: NSPanel {
+    var onCancel: (() -> Void)?
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
+    override func cancelOperation(_ sender: Any?) { onCancel?() }
+}
+
+/// Fades a panel in on present and out on dismiss, for a smoother feel.
+@MainActor
+enum PanelFade {
+    static func present(_ panel: NSPanel) {
+        panel.alphaValue = 0
+        panel.makeKeyAndOrderFront(nil)
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.22
+            ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            panel.animator().alphaValue = 1
+        }
+    }
+
+    static func dismiss(_ panel: NSPanel) {
+        NSAnimationContext.runAnimationGroup({ ctx in
+            ctx.duration = 0.16
+            ctx.timingFunction = CAMediaTimingFunction(name: .easeIn)
+            panel.animator().alphaValue = 0
+        }, completionHandler: { panel.orderOut(nil) })
+    }
 }
 
 /// Floating chat panel about a captured screenshot, styled after Apple/ChatGPT.
@@ -39,15 +64,17 @@ final class SnapChatController {
         panel.isMovableByWindowBackground = true
         panel.appearance = NSAppearance(named: .darkAqua)
         panel.center()
+        panel.onCancel = { [weak self] in self?.close() }
         self.panel = panel
 
         NSApp.activate(ignoringOtherApps: true)
-        panel.makeKeyAndOrderFront(nil)
+        PanelFade.present(panel)
     }
 
     private func close() {
-        panel?.orderOut(nil)
-        panel = nil
+        guard let panel else { return }
+        self.panel = nil
+        PanelFade.dismiss(panel)
     }
 }
 
@@ -80,13 +107,18 @@ private struct SnapChatView: View {
                     VStack(alignment: .leading, spacing: 14) {
                         thumbnail
                         ForEach(turns) { turn in
-                            if turn.user {
-                                HStack { Spacer(minLength: 48); questionBubble(turn.text) }
-                            } else {
-                                answerText(turn.text)
+                            Group {
+                                if turn.user {
+                                    HStack { Spacer(minLength: 48); questionBubble(turn.text) }
+                                } else {
+                                    answerText(turn.text)
+                                }
                             }
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
                         }
-                        if sending { thinking }
+                        if sending {
+                            thinking.transition(.opacity)
+                        }
                         Color.clear.frame(height: 1).id(bottomID)
                     }
                     .padding(.horizontal, 18)
@@ -216,7 +248,9 @@ private struct SnapChatView: View {
     private func submit() {
         let question = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !question.isEmpty, !sending else { return }
-        turns.append(SnapTurn(user: true, text: question))
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+            turns.append(SnapTurn(user: true, text: question))
+        }
         input = ""
         persist(turns)
         Task { await runPending() }
@@ -227,9 +261,11 @@ private struct SnapChatView: View {
         sending = true
         let reply = await send(turns)
         sending = false
-        switch reply {
-        case .answer(let answer): turns.append(SnapTurn(user: false, text: answer))
-        case .failure(let error): turns.append(SnapTurn(user: false, text: "⚠︎ \(error)"))
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+            switch reply {
+            case .answer(let answer): turns.append(SnapTurn(user: false, text: answer))
+            case .failure(let error): turns.append(SnapTurn(user: false, text: "⚠︎ \(error)"))
+            }
         }
         persist(turns)
     }

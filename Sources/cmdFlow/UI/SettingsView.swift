@@ -374,7 +374,11 @@ private struct ProviderCard: View {
         }
         .card()
         .sheet(isPresented: $showModelPicker) {
-            ModelPickerSheet(selected: $app.settings.openRouterModel)
+            ModelPickerSheet(
+                selected: app.settings.cloudProvider == .openRouter ? $app.settings.openRouterModel : $app.settings.openAIModel,
+                title: app.settings.cloudProvider == .openRouter ? "OpenRouter models" : "OpenAI models",
+                load: { await loadModels(provider: app.settings.cloudProvider, openAIKey: app.openAIKey) }
+            )
         }
     }
 
@@ -392,31 +396,16 @@ private struct ProviderCard: View {
     }
 
     @ViewBuilder private var modelField: some View {
+        let isOpenRouter = app.settings.cloudProvider == .openRouter
         VStack(alignment: .leading, spacing: 5) {
             SectionLabel("Model")
-            if app.settings.cloudProvider == .openRouter {
-                HStack(spacing: 8) {
-                    TextField("e.g. openai/gpt-5.4-mini", text: $app.settings.openRouterModel)
-                        .textFieldStyle(.roundedBorder)
-                        .font(.system(.body, design: .monospaced))
-                    Button { showModelPicker = true } label: {
-                        Label("Search", systemImage: "magnifyingglass")
-                    }
-                }
-            } else {
-                HStack(spacing: 8) {
-                    TextField("e.g. gpt-5.4-mini", text: $app.settings.openAIModel)
-                        .textFieldStyle(.roundedBorder)
-                        .font(.system(.body, design: .monospaced))
-                    Menu {
-                        ForEach(OpenAIService.suggestedModels, id: \.self) { model in
-                            Button(model) { app.settings.openAIModel = model }
-                        }
-                    } label: {
-                        Label("Models", systemImage: "list.bullet")
-                    }
-                    .menuStyle(.borderlessButton)
-                    .fixedSize()
+            HStack(spacing: 8) {
+                TextField(isOpenRouter ? "e.g. openai/gpt-5.4-mini" : "e.g. gpt-5.4-mini",
+                          text: isOpenRouter ? $app.settings.openRouterModel : $app.settings.openAIModel)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(.body, design: .monospaced))
+                Button { showModelPicker = true } label: {
+                    Label("Search", systemImage: "magnifyingglass")
                 }
             }
         }
@@ -480,7 +469,11 @@ private struct ScreenshotCard: View {
         }
         .card()
         .sheet(isPresented: $showVisionPicker) {
-            ModelPickerSheet(selected: $app.settings.openRouterVisionModel)
+            ModelPickerSheet(
+                selected: app.settings.screenshotProvider == .openRouter ? $app.settings.openRouterVisionModel : $app.settings.openAIVisionModel,
+                title: app.settings.screenshotProvider == .openRouter ? "OpenRouter models" : "OpenAI models",
+                load: { await loadModels(provider: app.settings.screenshotProvider, openAIKey: app.openAIKey) }
+            )
         }
     }
 
@@ -505,28 +498,15 @@ private struct ScreenshotCard: View {
     }
 
     @ViewBuilder private var visionModelField: some View {
+        let isOpenRouter = app.settings.screenshotProvider == .openRouter
         VStack(alignment: .leading, spacing: 5) {
             SectionLabel("Vision model")
-            if app.settings.screenshotProvider == .openRouter {
-                HStack(spacing: 8) {
-                    TextField("e.g. openai/gpt-5.4", text: $app.settings.openRouterVisionModel)
-                        .textFieldStyle(.roundedBorder).font(.system(.body, design: .monospaced))
-                    Button { showVisionPicker = true } label: {
-                        Label("Search", systemImage: "magnifyingglass")
-                    }
-                }
-            } else {
-                HStack(spacing: 8) {
-                    TextField("e.g. gpt-5.4", text: $app.settings.openAIVisionModel)
-                        .textFieldStyle(.roundedBorder).font(.system(.body, design: .monospaced))
-                    Menu {
-                        ForEach(OpenAIService.suggestedVisionModels, id: \.self) { model in
-                            Button(model) { app.settings.openAIVisionModel = model }
-                        }
-                    } label: {
-                        Label("Models", systemImage: "list.bullet")
-                    }
-                    .menuStyle(.borderlessButton).fixedSize()
+            HStack(spacing: 8) {
+                TextField(isOpenRouter ? "e.g. openai/gpt-5.4" : "e.g. gpt-5.4",
+                          text: isOpenRouter ? $app.settings.openRouterVisionModel : $app.settings.openAIVisionModel)
+                    .textFieldStyle(.roundedBorder).font(.system(.body, design: .monospaced))
+                Button { showVisionPicker = true } label: {
+                    Label("Search", systemImage: "magnifyingglass")
                 }
             }
         }
@@ -608,33 +588,66 @@ private struct ActionCard: View {
     }
 }
 
-// MARK: - OpenRouter model search
+// MARK: - Model search (OpenRouter + OpenAI)
+
+struct ModelItem: Identifiable, Equatable {
+    let id: String
+    let name: String
+    let free: Bool
+}
+
+enum ModelLoad {
+    case ok([ModelItem])
+    case failed(String)
+}
+
+/// Loads the model list for a provider (OpenRouter is keyless; OpenAI needs the key).
+@MainActor
+func loadModels(provider: CloudProvider, openAIKey: String) async -> ModelLoad {
+    switch provider {
+    case .openRouter:
+        do {
+            let list = try await OpenRouterService.listModels()
+            let items = list
+                .sorted { $0.displayName.lowercased() < $1.displayName.lowercased() }
+                .map { ModelItem(id: $0.id, name: $0.displayName, free: $0.isFree) }
+            return .ok(items)
+        } catch {
+            return .failed("Couldn't load the model list. Check your connection.")
+        }
+    case .openAI:
+        do {
+            let ids = try await OpenAIService.listChatModels(apiKey: openAIKey)
+            return .ok(ids.map { ModelItem(id: $0, name: $0, free: false) })
+        } catch {
+            return .failed(error.localizedDescription)
+        }
+    }
+}
 
 private struct ModelPickerSheet: View {
     @Binding var selected: String
+    let title: String
+    let load: () async -> ModelLoad
     @Environment(\.dismiss) private var dismiss
 
     @State private var query = ""
-    @State private var models: [OpenRouterService.Model] = []
+    @State private var models: [ModelItem] = []
     @State private var loading = true
     @State private var error: String?
 
-    private var filtered: [OpenRouterService.Model] {
+    private var filtered: [ModelItem] {
         guard !query.isEmpty else { return models }
         let q = query.lowercased()
-        return models.filter {
-            $0.id.lowercased().contains(q) || ($0.name?.lowercased().contains(q) ?? false)
-        }
+        return models.filter { $0.id.lowercased().contains(q) || $0.name.lowercased().contains(q) }
     }
 
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("OpenRouter models")
-                    .font(.system(.headline, design: .rounded))
+                Text(title).font(.system(.headline, design: .rounded))
                 Spacer()
-                Button("Done") { dismiss() }
-                    .keyboardShortcut(.defaultAction)
+                Button("Done") { dismiss() }.keyboardShortcut(.defaultAction)
             }
             .padding(14)
             Divider()
@@ -644,15 +657,12 @@ private struct ModelPickerSheet: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let error {
                 VStack(spacing: 10) {
-                    Image(systemName: "wifi.exclamationmark")
-                        .font(.largeTitle).foregroundStyle(.orange)
-                    Text(error).font(.caption).foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                    Button("Try again") { Task { await load() } }
+                    Image(systemName: "wifi.exclamationmark").font(.largeTitle).foregroundStyle(.orange)
+                    Text(error).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                    Button("Try again") { Task { await run() } }
                         .buttonStyle(.borderedProminent).tint(Palette.accentB)
                 }
-                .padding()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List(filtered) { model in
                     Button {
@@ -660,45 +670,34 @@ private struct ModelPickerSheet: View {
                         dismiss()
                     } label: {
                         HStack(spacing: 10) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(model.displayName).font(.system(.body, design: .rounded))
-                                Text(model.id).font(.caption2).foregroundStyle(.secondary)
-                                    .textSelection(.enabled)
-                            }
+                            Text(model.id).font(.system(.body, design: .rounded))
+                                .textSelection(.enabled)
                             Spacer()
-                            if model.isFree {
-                                Text("free")
-                                    .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(.green)
+                            if model.free {
+                                Text("free").font(.caption2.weight(.semibold)).foregroundStyle(.green)
                                     .padding(.horizontal, 6).padding(.vertical, 2)
                                     .background(Capsule().fill(Color.green.opacity(0.15)))
                             }
                             if model.id == selected {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundStyle(Palette.accentB)
+                                Image(systemName: "checkmark.circle.fill").foregroundStyle(Palette.accentB)
                             }
                         }
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                 }
-                .searchable(text: $query, placement: .automatic, prompt: "Search models (e.g. claude, gpt, gemini)")
+                .searchable(text: $query, placement: .automatic, prompt: "Search models")
             }
         }
         .frame(width: 540, height: 580)
-        .task { await load() }
+        .task { await run() }
     }
 
-    private func load() async {
-        loading = true
-        error = nil
-        do {
-            let list = try await OpenRouterService.listModels()
-            models = list.sorted { $0.displayName.lowercased() < $1.displayName.lowercased() }
-            loading = false
-        } catch {
-            self.error = "Couldn't load the model list. Check your connection."
-            loading = false
+    private func run() async {
+        loading = true; error = nil
+        switch await load() {
+        case .ok(let items): models = items; loading = false
+        case .failed(let message): error = message; loading = false
         }
     }
 }

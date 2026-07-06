@@ -56,7 +56,7 @@ Cloud provider: **OpenRouter** (300+ models, built-in search) or **OpenAI** (`gp
 - ⚙️ **Multiple actions** — each with its own shortcut and prompt, persisted locally.
 - 📸 **Screenshot chat (vision)** — a shortcut drops a region selector; a focused prompt pill appears, then a floating multi-turn chat about the capture (continue the conversation, history in the Chats tab, editable system prompt). Cloud-only (OpenRouter/OpenAI) — Apple's on-device model is text-only.
 - 🔒 **On-device by default** — your text never leaves the Mac until you pick a cloud provider.
-- ☁️ **OpenRouter + OpenAI** — your own key (in the Keychain), plus an OpenRouter model search.
+- ☁️ **OpenRouter + OpenAI** — your own key (in the Keychain), with a live model search for both.
 - 🎬 **Animated shortcut recorder** — radar pulse, keycaps, and a warning on system collisions.
 - 🚀 **Launch at login** — one toggle (`SMAppService`).
 - 📍 **Stays out of the way** — no Dock icon; a quiet `⌘` in the menu bar that reflects state (working / success / error).

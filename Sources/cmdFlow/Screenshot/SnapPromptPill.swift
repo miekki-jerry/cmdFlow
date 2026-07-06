@@ -40,15 +40,17 @@ final class SnapPromptPill {
             if originY < f.minY + 8 { originY = rect.maxY + 12 } // no room below → put above
         }
         panel.setFrame(NSRect(x: originX, y: originY, width: width, height: height), display: true)
+        panel.onCancel = { [weak self] in self?.close(); onCancel() }
         self.panel = panel
 
         NSApp.activate(ignoringOtherApps: true)
-        panel.makeKeyAndOrderFront(nil)
+        PanelFade.present(panel)
     }
 
     private func close() {
-        panel?.orderOut(nil)
-        panel = nil
+        guard let panel else { return }
+        self.panel = nil
+        PanelFade.dismiss(panel)
     }
 }
 
